@@ -1,0 +1,121 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<script th:inline="javascript">
+	
+	var reportInfo = {};
+	
+	$(document).ready(function(){
+		getContentInfo();	
+	});
+	
+	function getContentInfo(){
+		if(getParams("contentType") != null) {
+			reportInfo['content_type'] = getParams("contentType")[0];
+		}
+		if(getParams("contentId")!=null	){
+			reportInfo['content_id']=getParams("contentId")[0];
+		}
+		log(reportInfo);
+	}
+	
+	function reportContents() {		
+		var reportType = $('#sel_report_type').val();
+		var reports = $("#reports").val();
+		
+		
+		if(reportType == "") {
+			alert(/*[[ #{req.report.type} ]]*/);
+			return;
+		}
+		if(reports.length == 0) {
+			alert(/*[[ #{req.report.content} ]]*/);
+			return;
+		}
+		
+		reportInfo['report_type'] = reportType;
+		reportInfo['reports'] = reports;
+		log(reportInfo);
+		if(confirm(/*[[ #{ask.regist} ]]*/)) {
+			
+			let reqJsonStr = JSON.stringify(reportInfo);
+			log(reqJsonStr);
+			let url = prefix + '/api/prod/report_abnormal.do';
+			
+			$.ajax({
+		        url: url,
+		        type:'post',
+		        data: reqJsonStr,
+		        contentType:"application/json",
+		        success:function(data){
+		        	log(data);
+		        	if(data['state'] == STATE_SUCCESS){
+		        		alert(/*[[ #{res.regist} ]]*/);
+		        		goBackPage();
+		        	} else{
+		        		alertErrorMessage(data['error_message'],true);
+		    		}
+		        },
+		        error:function(request, status, error){
+		        	alertNetworkErr();
+		        }
+		    });
+		}
+	}
+	
+	function goBackPage(){
+		window.history.back();
+	}
+
+</script>
+<body>    
+
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a href="javascript:history.go(-1)" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail" th:text="#{report.report}">신고 하기</h1>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <div class="wrap_log">
+
+                    <div class="wrap_account">
+                        <div class="wrap_input">
+                            <select id="sel_report_type" class="i_select_n i_select_ac">
+                                <option value="" th:text="#{report.report_categ}">신고 분야</option>
+                                <option value=0 th:text="#{report.report_categ.prod_info}">제품 정보</option>
+                                <option value=1 th:text="#{report.report_categ.categ_info}">카테고리 정보</option>
+                                <option value=2 th:text="#{report.report_categ.license}">라이선스 이슈</option>
+                                <option value=3 th:text="#{report.report_categ.etc}">기타 사항</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="wrap_textarea">
+                        <textarea id="reports" th:placeholder="#{report.report_content}"></textarea>
+                    </div>
+
+                </div>
+
+                <div class="btn">
+                    <a class="btn_type_bg btn_type_gray_none_fill" href="javascript:goBackPage()" th:text="#{btn.close}">취소</a>
+                    <a class="btn_type_bg btn_type_orange_fill" href="javascript:reportContents()" th:text="#{btn.ok}">확인</a>
+                </div>
+                
+            </div>
+            
+        </div>
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+
+
+</html>

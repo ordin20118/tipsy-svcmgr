@@ -1,0 +1,340 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<script th:inline="javascript">
+	const EVALUE_TYPE_EVALUE_PROD = 1;
+	const EVALUE_TYPE_EVALUE_REVIEW = 2; 
+	const EVALUE_TYPE_COMMENT = 3;
+
+	
+	let filterType = null;
+	let sortType = SORT_TYPE_DESC;
+	let moreJobResult = true;
+	let currentPage = 1;
+	let dataCnt = /*[[${histSize}]]*/;
+	$(document).ready(function(){
+		
+		jQuery(window).scroll(function() {
+			if (jQuery(window).scrollTop() >= jQuery(document).height() - jQuery(window).height()) {
+				if(moreJobResult && dataCnt < 100) {
+					getEvalueHist(currentPage+1, 20);
+		    	}
+			}
+		});	
+	})
+
+	
+	function getEvalueHist(nowPage, perPage){
+		let urlParam = 'paging.nowPage=' +nowPage +
+  		'&paging.perPage=' + perPage +
+  		'&orderby.field=reg_date' +
+  		'&orderby.sorting='+sortType;
+  		if(filterType != null){
+  			urlParam += '&filterType='+filterType;
+  		}
+  		
+		let reqUrl = prefix +'/api/member_info/get_evalue_hist.do?'+urlParam;
+		
+		$.ajax({
+	        url: reqUrl,
+	        type:'get',
+	        success:function(data){
+	        	log(data);
+	        	if(data['state'] == STATE_SUCCESS){
+	        		currentPage = nowPage;
+	        		printEvalueHistory(data['list']);
+	        	} else{
+	        		alertErrorMessage(data['error_message']);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	function printEvalueHistory(list){
+		let appendLi = makeEvalueAppendLi(list);
+		
+		$("#ul_evalue_history").append(appendLi);
+		
+		dataCnt += list.length;
+		if(list.length < 20){
+			moreJobResult = false;
+		}
+	}
+	
+	function makeEvalueAppendLi(list){
+		let appendLi = "";
+		if(list.length > 0){
+			for(let i=0; i<list.length; i++){
+				if(list[i]['evalue_type'] == EVALUE_TYPE_EVALUE_PROD){
+					appendLi += makeProdEvalueLi(list[i]);
+				} else if (list[i]['evalue_type'] == EVALUE_TYPE_EVALUE_REVIEW){
+					appendLi += makeReviewEvalueLi(list[i]);
+				} else if (list[i]['evalue_type'] == EVALUE_TYPE_COMMENT){
+					appendLi += makeCommentLi(list[i]);
+				}
+				
+			}
+		}
+		return appendLi;
+	}
+	
+	function makeProdEvalueLi(data){
+		let evalueInfo = data;
+		let contentInfo = evalueInfo['content_info'];
+		
+		let regDate = "-";
+		if(evalueInfo['reg_date'] != null){
+			regDate = moment(evalueInfo['reg_date']).format('YYYY.MM.DD HH:mm');
+		}
+		
+		let myEvalue = Number(evalueInfo['evalue_content']).toFixed(1);
+		
+		let wordProd = /*[[#{filter.content.prod}]]*/;
+		let wordRate = /*[[#{member.evalue.rating}]]*/;
+		let wordMyRate = /*[[#{member.evalue.my_rating}]]*/;
+		
+		let appendLi = 	'<li>'+
+						'    <div class="tl_type1">'+
+						'        <div class="s_plusminus s_plus">&middot;</div>'+
+						'        <div class="cont">'+
+						'            <p class="time">'+regDate+'</p>'+
+						'            <p class="title"><span class="type1">'+wordProd+'</span>'+wordRate+'</p>'+
+						'            <p class="desc"><a href="javascript:moveProd('+evalueInfo['content_id']+')">'+contentInfo['prod_name']+'</a></p>'+
+						'            <p class="data">'+
+						'                <span><strong>'+wordMyRate+'</strong><em class="star"></em>'+myEvalue+'</span>'+
+						'            </p>'+
+						'        </div>'+
+						'    </div>'+
+						'</li>';
+		return appendLi;
+	}
+	
+	function makeReviewEvalueLi(data){
+		let evalueInfo = data;
+		let contentInfo = evalueInfo['content_info'];
+		
+		let regDate = "-";
+		if(evalueInfo['reg_date'] != null){
+			regDate = moment(evalueInfo['reg_date']).format('YYYY.MM.DD HH:mm');
+		}
+		
+		let myEvalue = ''
+		let wordUseful = /*[[#{review.useful}]]*/;
+		let wordUnuseful = /*[[#{review.unuseful}]]*/;
+		let wordReview = /*[[#{review.unuseful}]]*/;
+		let wordEvalueHelp = /*[[#{review.eval.useful}]]*/;
+		if(evalueInfo['evalue_content'] == 0){
+			myEvalue = '<em class="agr"></em>'+wordUseful;
+		} else {
+			myEvalue = '<em class="agr"style="background:url('+prefix+'/image/img_unlike_on1.png);background-size:97%;margin:3px 3px 0 0;"></em>'+wordUnuseful;
+		}
+		
+		let appendLi = 	'<li>'+
+						'    <div class="tl_type1">'+
+						'        <div class="s_plusminus s_plus">&middot;</div>'+
+						'        <div class="cont">'+
+						'            <p class="time">'+regDate+'</p>'+
+						'            <p class="title"><span class="type2">'+wordReview+'</span>'+wordReview+'</p>'+
+						'            <p class="desc"><a href="javascript:moveReview('+evalueInfo['content_id']+')">'+contentInfo['title']+'</a></p>'+
+						'            <p class="data">'+
+						'                <span><strong>'+wordReview+'</strong>'+myEvalue+'</span>'+
+						'            </p>'+
+						'        </div>'+
+						'    </div>'+
+						'</li>';
+		return appendLi;
+	}
+	
+	function makeCommentLi(data){
+		let evalueInfo = data;
+		let contentInfo = evalueInfo['content_info'];
+		
+		let regDate = "-";
+		if(evalueInfo['reg_date'] != null){
+			regDate = moment(evalueInfo['reg_date']).format('YYYY.MM.DD HH:mm');
+		}
+		
+		let appendP = ''
+		
+		let wordProd = 		/*[[#{filter.content.prod}]]*/;
+		let wordReview = 	/*[[#{filter.content.review}]]*/;
+		let wordComment =	/*[[#{common.comment}]]*/; 
+		
+		if(evalueInfo['content_type'] == TYPE_PROD){
+			appendP = '<p class="title"><span class="type1">'+wordProd+'</span>'+wordComment+'</p>'+
+			'<p class="desc"><a href="javascript:moveProd('+evalueInfo['content_id']+')">'+contentInfo['prod_name']+'</a></p>'
+		} else {
+			appendP = '<p class="title"><span class="type2">'+wordReview+'</span>'+wordProd+'</p>'+
+			'<p class="desc"><a href="javascript:moveReview('+evalueInfo['content_id']+')">'+contentInfo['title']+'</a></p>'
+		}
+		
+		let appendLi = 	'<li>'+
+						'    <div class="tl_type1">'+
+						'        <div class="s_plusminus s_plus">&middot;</div>'+
+						'        <div class="cont">'+
+						'            <p class="time">'+regDate+'</p>'+
+										appendP+
+						'            <p class="data">'+
+						                 evalueInfo['evalue_content']+
+						'            </p>'+
+						'        </div>'+
+						'    </div>'+
+						'</li>';
+		return appendLi;
+	}
+	
+	function changeFilterType(){
+		log($("#sel_filter_type").val());
+		if($("#sel_filter_type").val() == 0){
+			filterType = null;
+		} else {
+			filterType = $("#sel_filter_type").val();
+		}
+		contentClear()
+		getEvalueHist(1, 20);
+	}
+	
+	function changeSortType(){
+		log($("#sel_sort_type").val());
+		sortType = $("#sel_sort_type").val();
+		contentClear();
+		getEvalueHist(1, 20);
+	}
+	
+	function contentClear(){
+		$("#ul_evalue_history").empty()
+	}
+</script>
+<body>    
+
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a th:href="@{/m/channel/channel.do}" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail" th:text="#{member.evalue_hist}">평가 내역</h1>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <div class="bg_gray">
+
+                    <div class="wrap_content_padding" style="margin-bottom:0;">
+                        
+                        <div class="wrap_myinfo">
+
+                            <ul class="mydata_now">
+                                <li>
+                                    <a>
+                                        <span class="tit" th:text="#{filter.content.prod}">제품</span>
+                                        <p class="num" th:text="${prodCnt}">250</p>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a>
+                                        <span class="tit" th:text="#{filter.content.review}">리뷰</span>
+                                        <p class="num" th:text="${reviewCnt}">250</p>
+                                    </a>
+                                </li>
+                            </ul>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="wrap_content_padding" style="margin-top:10px;">
+
+                    <!-- S:View Filter -->
+                    <div class="wrap_viewfilter">
+
+                        <div class="viewfilter_filter">
+                            <select id="sel_filter_type" class="input_type_none" onchange="changeFilterType()">
+                                <option value = 0 th:text="#{filter.option.all_view}">전체보기</option>
+                                <option value = 1 th:text="#{filter.option.prod_eval_view}">제품평가보기</option>
+                                <option value = 2 th:text="#{filter.option.review_eval_view}">리뷰평가보기</option>
+                                <option value = 3 th:text="#{filter.option.prod_comm_view}">제품한마디보기</option>
+                                <option value = 4 th:text="#{filter.option.review_comm_view}">리뷰한마디보기</option>
+                            </select>
+                        </div>                          
+
+                        <div class="viewfilter_sort">
+                            <select id="sel_sort_type" class="input_type_none" onchange="changeSortType()" >
+                                <option value = "desc" th:text="#{common.orderby_lately}">최신순</option>
+                                <option value = "asc" th:text="#{common.orderby_firstly}">처음순</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <ul id="ul_evalue_history" class="timeline_wrap" th:if="${histSize > 0}">
+                    <th:block th:each="evalueHist : ${evalueHist}" th:with="EVALUE_TYPE_PROD=1, EVALUE_TYPE_REVIEW=2, EVALUE_TYPE_COMMENT=3, TYPE_PROD=100, TYPE_REVIEW=210">
+                    	<li th:if="${evalueHist.evalueType == EVALUE_TYPE_PROD}">
+                            <div class="tl_type1">
+                                <div class="s_plusminus s_plus">&middot;</div>
+                                <div class="cont">
+                                    <p class="time" th:text="${#calendars.format(evalueHist.regDate,'YYYY.MM.dd HH:mm')}">2020.10.10 14:34</p>
+                                    <p class="title"><span class="type1" th:text="#{filter.content.prod}">제품</span><th:block th:text="#{member.evalue.rating}">평점 평가</th:block></p>
+                                    <p class="desc"><a th:href="|javascript:moveProd(${evalueHist.contentId})|" th:text="${evalueHist.contentInfo.prodName}">갤럭시 S10</a></p>
+                                    <p class="data">
+                                        <span><strong th:text="#{member.evalue.my_rating}">나의 평가</strong><em class="star"></em><th:block th:text="${#numbers.formatDecimal(evalueHist.evalueContent,1,1)}"></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </li>
+                        <li th:if="${evalueHist.evalueType == EVALUE_TYPE_REVIEW}">
+                            <div class="tl_type1">
+                                <div class="s_plusminus s_plus">&middot;</div>
+                                <div class="cont">
+                                    <p class="time" th:text="${#calendars.format(evalueHist.regDate,'YYYY.MM.dd HH:mm')}">2020.10.10 14:34</p>
+                                    <p class="title"><span class="type2" th:text="#{filter.content.review}">리뷰</span><th:block th:text="#{review.eval.useful}">도움 평가</th:block></p>
+                                    <p class="desc"><a th:href="|javascript:moveReview(${evalueHist.contentId})|" th:text="${evalueHist.contentInfo.title}">갤럭시 S10 한달 사용 후기</a></p>
+                                    <p class="data">
+                                        <span th:if="${evalueHist.evalueContent == '0'}"><strong th:text="#{review.eval.useful}">도움 평가</strong><em class="agr"></em><th:block th:text="#{review.useful}">도움되요</th:block></span>
+                                        <span th:if="${evalueHist.evalueContent == '1'}"><strong th:text="#{review.eval.useful}">도움 평가</strong><em class="agr" th:style="|background:url(@{/image/img_unlike_on1.png});background-size:97%;margin:3px 3px 0 0;|"></em><th:block th:text="#{review.unuseful}">별로예요</th:block></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </li>
+                        <li th:if="${evalueHist.evalueType == EVALUE_TYPE_COMMENT}">
+                            <div class="tl_type1">
+                                <div class="s_plusminus s_plus">&middot;</div>
+                                <div class="cont">
+                                    <p class="time" th:text="${#calendars.format(evalueHist.regDate,'YYYY.MM.dd HH:mm')}">2020.10.10 14:34</p>
+                                    <th:block th:if="${evalueHist.contentType == TYPE_PROD}">
+	                                    <p class="title"><span class="type1" th:text="#{filter.content.prod}">제품</span><th:block th:text="#{member.evalue.rating}">평점 평가</th:block></p>
+                                    	<p class="desc"><a th:href="|javascript:moveProd(${evalueHist.contentId})|" th:text="${evalueHist.contentInfo.prodName}">갤럭시 S10</a></p>
+                                    
+                                    </th:block>
+                                    <th:block th:if="${evalueHist.contentType == TYPE_REVIEW}">
+	                                    <p class="title"><span class="type2" th:text="#{filter.content.review}">리뷰</span><th:block th:text="#{review.eval.useful}">도움 평가</th:block></p>
+                                    	<p class="desc"><a th:href="|javascript:moveReview(${evalueHist.contentId})|" th:text="${evalueHist.contentInfo.title}">갤럭시 S10 한달 사용 후기</a></p>
+                                    </th:block>
+                                    
+                                    <p class="ment" th:text="${evalueHist.evalueContent}">
+                                        여기는 신고 내용을 제공하는 자리입니다.여기는 신고 내용을 제공하는 자리입니다.여기는 신고 내용을 제공하는 자리입니다.
+                                    </p>
+                                </div>
+                            </div>
+                        </li>
+                    </th:block>
+                    </ul>  
+
+                </div>
+
+            </div>
+            
+        </div>
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

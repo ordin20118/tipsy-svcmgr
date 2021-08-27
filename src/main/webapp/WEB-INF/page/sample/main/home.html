@@ -1,0 +1,317 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<script th:inline="javascript" th:src="@{/js/tom.search.autocomplate.js}"></script>
+
+<script type="text/javascript" th:inline="javascript">
+
+	let prevKeyword = null;
+
+	$(document).ready(function() {
+		
+		scrollAndAutoMore();
+	}); 
+
+	function moveSearchPage(){
+		location.href = prefix + "/m/search/search.do";
+	}
+	
+	function searchBtn(keyword) {		
+		if(keyword.trim() == '') {
+			alert(/*[[#{req.search.keyword}]]*/);
+			return;
+		}
+		//log("keyword ["+keyword+"]");
+		location.href= prefix + '/m/search/search.do?keyword=' + keyword;
+	}
+	
+	
+	function scrollAndAutoMore() {
+		log("REGISTER scrollAndAutoMore");
+		jQuery(window).scroll(function() {
+			if ((jQuery(window).scrollTop()+100) >= jQuery(document).height() - jQuery(window).height()) {
+				if(currentPage != null) {
+					log("CALL End Of Windows  SearchPage("+(currentPage+1)+")")
+					search(currentPage+1, null);
+				}
+			}
+		});
+	}
+	let searchEof = false;
+	let currentPage = 1;
+	
+	function search(nowPage, isInit) {
+		log("search ["+nowPage+"]["+isInit+"]");
+		currentPage = nowPage;
+		
+		
+		
+		currentPage = nowPage;
+		let urlParam = 'paging.nowPage=' + nowPage + 
+    	'&paging.perPage=4' +
+    	'';
+		
+		
+		
+		
+    	let url = prefix + '/api/recomm/recomm_mix_content_for_user.do?' + urlParam;
+    	log("search URL : ["+url+"]");
+    	
+		$.ajax({
+	        url: url,
+	        type:'get',
+	        success:function(data){
+	        	log(data);
+	        	if(data['state'] == 0) {
+	        		printSearchResult(data, isInit);
+	        		
+	    		} else{
+	    			alert(getErrorMsg(data['state']));
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+		
+	}
+	
+	
+	function printSearchResult(data, isInit, appendRow) {
+		let sParam = data['sparam'];
+		let paging = sParam['paging'];
+		log("paging['now_page'] :: " + paging['now_page']);
+		
+		
+		$("#ul_recomm_for_user").append(contentInfoListToLi(data['list']));
+		
+		
+		
+		//ul_result_review_video
+	}
+
+</script>
+<body>
+
+    <div id="page" class="wrap_total">
+    
+        <div class="content">
+			<th:block th:replace="/main/auto_complate.html"></th:block>
+            
+            <div id="div_search_result">
+	            <div class="header">
+		            <a href="#menu"><span></span></a>
+		        </div>
+	
+	            <div class="wrap_main_ser">
+	                <h1 th:text="#{reveiw.all_review}">세상의 모든 리뷰</h1>
+	                <img src="../image/bi_main.png" class="bi_main" alt="REVUNARA">
+	                <div class="main_search_wrap">
+	                    <input id="dummy_keyword" type="text" class="search_input input_type_none" onclick="showSearchPopup(true)" autocomplete="off">
+	                    <!-- 
+	                    <a href="" class="btn_search"></a>
+	                    -->
+	                </div>
+	                <div class="wrap_main_key">
+	                    <th:block th:each="keyword : ${recentSearchKeyword}">
+		                	<a th:href="@{/m/search/search.do} + '?keyword=' + ${keyword.keyword}" th:text="${keyword.keyword}"></a>
+	                    </th:block> 
+	                </div>
+	            </div>
+	            
+	            <div>
+	                <p class="foryou_ment" th:text="#{main.recomm_content}">당신을 위한 추천 콘텐츠</p>
+	                <img src="../image/img_foryou.png" class="foryou" alt="foryou">
+	
+	
+	
+	
+	
+				<th:block th:if="${recentArticleReview} != null and ${recentArticleReview.size()} != 0">	
+	                <div class="list_wrap">
+	                    <div class="list_wrap_line">
+		                    <div class="group_title">
+		                        <p class="title" th:text="#{main.hist_read_blog}">내가 본 블로그</p>
+		                        
+		                        <th:block th:if="${loginInfo.loginType} != 5">
+		                        	<a th:href="@{/m/member_info/read_hist.do}" class="more" th:utext="|#{btn.more}<em></em>|">더보기<em></em></a>
+		                        </th:block>
+		                        
+		                    </div>
+		                     <ul class="list_type_flat">
+				                 <th:block th:each="item: ${recentArticleReview}">
+									<th:block th:replace="/common/item_content.html"/>
+				                </th:block>
+			                </ul>
+			                
+	                    </div>
+	                </div>
+	            </th:block>
+	            
+	            
+
+
+				<th:block th:if="${recentVideoReview} != null and ${recentVideoReview.size()} != 0">	
+	                <div class="list_wrap">
+	                    <div class="list_wrap_line">
+		                    <div class="group_title">
+		                        <p class="title" th:text="#{main.hist_read_video}">내가 본 동영상</p>
+		                        <th:block th:if="${loginInfo.loginType} != 5">
+		                        	<a th:href="@{/m/member_info/read_hist.do}" class="more" th:utext="|#{btn.more}<em></em>|">더보기<em></em></a>
+		                        </th:block>
+		                    </div>
+		                     <ul class="list_type_flat">
+				                 <th:block th:each="item: ${recentVideoReview}">
+									<th:block th:replace="/common/item_content.html"/>
+				                </th:block>
+			                </ul>
+			                
+	                    </div>
+	                </div>
+	            </th:block>
+	            
+	            
+	            
+	            <th:block th:if="${recentProd} != null and ${recentProd.size()} != 0">	
+	                <div class="list_wrap">
+	                    <div class="list_wrap_line">
+		                    <div class="group_title">
+		                        <p class="title" th:text="#{main.hist_read_prod}">내가 본 제품</p>
+		                        <th:block th:if="${loginInfo.loginType} != 5">
+		                        	<a th:href="@{/m/member_info/read_hist.do}" class="more" th:utext="|#{btn.more}<em></em>|">더보기<em></em></a>
+		                        </th:block>
+		                    </div>
+		                     <ul class="list_type_flat">
+				                 <th:block th:each="item: ${recentProd}">
+									<th:block th:replace="/common/item_content.html"/>
+				                </th:block>
+			                </ul>
+			                
+	                    </div>
+	                </div>
+	            </th:block>
+	            
+	            
+	            <th:block th:if="${newArticleReview} != null and ${newArticleReview.size()} != 0">	
+	                <div class="list_wrap">
+	                    <div class="list_wrap_line">
+		                    <div class="group_title">
+		                        <p class="title">NEW <th:block th:text="#{review.review}">리뷰</th:block></p>
+		                        <a th:href="@{/m/home_more.do?moreType=newArticleReview}" class="more" th:utext="|#{btn.more}<em></em>|">더보기<em></em></a>
+		                    </div>
+		                     <ul class="list_type_flat">
+				                 <th:block th:each="item: ${newArticleReview}">
+									<th:block th:replace="/common/item_content.html"/>
+				                </th:block>
+			                </ul>
+			                
+	                    </div>
+	                </div>
+	            </th:block>
+
+
+	            <th:block th:if="${hotVideoReview} != null and ${hotVideoReview.size()} != 0">	
+	                <div class="list_wrap">
+	                    <div class="list_wrap_line">
+		                    <div class="group_title">
+		                        <p class="title">HOT <th:block th:text="#{review.type.video}">동영상</th:block></p>
+		                        <a th:href="@{/m/home_more.do?moreType=hotVideoReview}" class="more" th:utext="|#{btn.more}<em></em>|">더보기<em></em></a>
+		                    </div>
+		                     <ul class="list_type_flat">
+				                 <th:block th:each="item: ${hotVideoReview}">
+									<th:block th:replace="/common/item_content.html"/>
+				                </th:block>
+			                </ul>
+			                
+	                    </div>
+	                </div>
+	            </th:block>
+	            
+	            
+	            
+	            <th:block th:if="${hotArticleReview} != null and ${hotArticleReview.size()} != 0">	
+	                <div class="list_wrap">
+	                    <div class="list_wrap_line">
+		                    <div class="group_title">
+		                        <p class="title">HOT <th:block th:text="#{review.review}">리뷰</th:block></p>
+		                        <a th:href="@{/m/home_more.do?moreType=hotArticleReview}" class="more" th:utext="|#{btn.more}<em></em>|">더보기<em></em></a>
+		                    </div>
+		                     <ul class="list_type_flat">
+				                 <th:block th:each="item: ${hotArticleReview}">
+									<th:block th:replace="/common/item_content.html"/>
+				                </th:block>
+			                </ul>
+			                
+	                    </div>
+	                </div>
+	            </th:block>
+	            
+	            
+	            
+	            <th:block th:if="${newProd} != null and ${newProd.size()} != 0">	
+	                <div class="list_wrap">
+	                    <div class="list_wrap_line">
+		                    <div class="group_title">
+		                        <p class="title">NEW <th:block th:text="#{filter.content.prod}">제품</th:block></p>
+		                        <a th:href="@{/m/home_more.do?moreType=newProd}" class="more" th:utext="|#{btn.more}<em></em>|">더보기<em></em></a>
+		                    </div>
+		                     <ul class="list_type_flat">
+				                 <th:block th:each="item: ${newProd}">
+									<th:block th:replace="/common/item_content.html"/>
+				                </th:block>
+			                </ul>
+			                
+	                    </div>
+	                </div>
+	            </th:block>
+	            
+	            
+	            <th:block th:if="${hotProd} != null and ${hotProd.size()} != 0">	
+	                <div class="list_wrap">
+	                    <div class="list_wrap_line">
+		                    <div class="group_title">
+		                        <p class="title">HOT <th:block th:text="#{filter.content.prod}">제품</th:block></p>
+		                        <!-- <a href="" class="more">더보기<em></em></a> -->
+		                    </div>
+		                     <ul class="list_type_flat">
+				                 <th:block th:each="item: ${hotProd}">
+									<th:block th:replace="/common/item_content.html"/>
+				                </th:block>
+			                </ul>
+	                    </div>
+	                </div>
+	            </th:block>
+	            
+	                  
+	                  <div class="list_wrap">
+	                    <div class="list_wrap_line">
+		                    <div class="group_title">
+		                    </div>
+		                     <ul id="ul_recomm_for_user" class="list_type_flat">
+
+			                </ul>
+			                
+	                    </div>
+	                </div>
+	                <!-- //list_wrap -->   
+
+                 
+				</div>
+            </div>
+
+        </div>
+		<!-- footer -->
+        <th:block th:replace="/common/footer.html"></th:block>
+		<!-- sidemenu -->
+        <th:block th:replace="/common/sidemenu.html"></th:block>
+    </div>
+
+    <!-- S:Top Slide -->
+    <div id="scrolltop"></div>
+    
+    <!-- mmenu script -->
+    <th:block th:replace="/common/mmenu_script.html"></th:block>
+
+</body>
+
+</html>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tomahawk>
+	<serverName>All Alcohol</serverName>
+	
+
+	<extras>
+		
+		
+		<!-- 
+		<field name="test.String"    type="string">testString</field>
+		<field name="test.Integer"   type="integer">1000</field>
+		<field name="test.Long"      type="long">1000</field>
+		<field name="test.Double"    type="double">1000.054</field>
+		-->
+		<field name="datapath.image"    type="string">C:\Users\GwangA\Desktop\dev\datastore\image</field>
+		
+		
+	</extras>
+</tomahawk>

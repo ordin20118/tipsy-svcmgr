@@ -1,0 +1,1049 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<head>
+	<meta property="og:title" th:content="${reviewInfo.reviewItem.title}">
+	<meta property="og:description" th:content="${reviewInfo.reviewItem.preview}">
+	<meta property="og:image" th:content="${reviewInfo.reviewItem.representImgUrl}">
+	<!-- Link Swiper's CSS -->
+	<link rel="stylesheet" type="text/css" th:href="@{/css/swiper.min.css}">  
+	<!-- Swiper JS -->
+	<script th:src="@{/js/swiper.min.js}"></script>
+	<script type="text/JavaScript" src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+	<script th:inline="javascript" th:src="@{/js/tom.search.autocomplate.js}"></script>
+</head>
+<script th:inline="javascript">
+
+	const COMMENT_PER_PAGE = 5;
+	const COMMENT_STATUS_NORMAL = 0;
+	const STATUS_SUBSCRIBE = true;
+	const STATUS_UNSUBSCRIBE = false;
+	const RECOMM_PROD_PER_PAGE = 4;
+
+	var reviewInfo = /*[[${reviewInfo}]]*/;
+	var userLoginType = /*[[${userLoginType}]]*/;
+	var kakaoKey = /*[[${kakaoKey}]]*/;
+	var reviewTitle = /*[[${reviewTitle}]]*/;
+	var repImgPath = /*[[${repImgPath}]]*/;
+	var imgPrefix = /*[[${imgPrefix}]]*/;
+	var prodId = /*[[ ${prodId} ]]*/;
+	var reviewId = null;
+	var reviewViewCount = /*[[ ${reviewInfo.reviewItem.viewCount} ]]*/;
+	var reviewPickCount = /*[[ ${reviewInfo.reviewItem.pickCount} ]]*/;
+	var refreshCode = /*[[${refreshCode}]]*/
+	var reviewLikeStatus = null;
+	
+	
+	
+	var nowPage = 2;
+	
+
+	$(document).ready(function() {
+		log(reviewInfo);
+		
+		log("reviewViewCount:"+reviewViewCount);
+		log("reviewPickCount:"+reviewPickCount);
+		
+		Kakao.init(kakaoKey);	
+		setReviewImg();
+		
+		if(getParams("review_id") != null) {
+			reviewId = getParams("review_id")[0];
+		}
+				
+	})
+
+	function onOffLayer(layerName){
+		if($("#"+layerName).css("display") == "none"){
+			$("#"+layerName).css("display","");
+		} else {
+			$("#"+layerName).css("display","none")
+		}		
+	}
+	
+	function reportContent() {
+		if(userLoginType == LOGIN_TYPE_TEMP) {
+			loginConfirm();
+		} else {
+			window.location.href = prefix + "/m/review/write_page.do?prodId=" + prodId + "&reviewId=" + reviewId;
+		}
+		
+	}
+	
+	function selectReviewRating(status) {
+		
+		//wlike_on
+		$("#div_rate_like").removeClass("wlike_on");
+		$("#div_rate_dislike").removeClass("wlike_on");
+		$("#div_rate_" + status).addClass("wlike_on");
+		reviewLikeStatus = status;
+		
+	}
+	
+
+	//////Review Functions
+	function pickReview(likeObj) {
+		
+		let checked = !$(likeObj).hasClass("like_on");
+		
+		if(userLoginType == LOGIN_TYPE_TEMP){
+			openLayer("div_login_layer");
+		} else {
+			//let message = /*[[ #{ask.review.pick.msg} ]]*/;
+			let reviewId = getParams("review_id");
+			//let result = confirm(message);
+			if(true){
+				let url = prefix + "/api/member_pick/pick_content.do?pick_type="+TYPE_REVIEW+"&content_id="+reviewId + "&pick_status=" + checked;
+				$.ajax({
+			        url: url,
+			        type:'get',
+			        success:function(data){
+			        	log(data);
+			        	if(data['state'] == STATE_SUCCESS){		        		
+			        		if(data['data']['pick_status'] == 0){
+			        			$(likeObj).addClass("like_on");
+			        			reviewPickCount++;
+			        		} else {
+			        			$(likeObj).removeClass("like_on");
+			        			reviewPickCount--;
+			        		}			        		
+			        		updateStats();
+			        	} else {
+			        		alertErrorMessage(data['error_message']);
+			        	}
+			        },
+			        error:function(request, status, error){
+			        	alertNetworkErr();
+			        }
+			    });
+			}
+		}
+			
+	}
+	
+	function updateStats() {
+		let statHtml = '<strong>조회</strong>'+numAsString(reviewViewCount)+'<br><strong>좋아요</strong>'+numAsString(reviewPickCount);		
+		$("#p_stat").html(statHtml);		
+	}
+	
+	
+	// library?
+	function numAsString(num) {
+		if(num >= 1000) {
+			return Math.floor(num/1000) + "k";
+		} else {
+			return num + "";
+		}
+	}
+	
+
+	function rateReview(){
+		if(userLoginType == LOGIN_TYPE_TEMP){
+			openLayer("div_login_layer");
+		} else {
+			
+			if(reviewLikeStatus == null) {
+				alert("평가해주세요.");
+				return;
+			}
+			
+						
+			let likeStatus = 1;
+			if(reviewLikeStatus == 'like') {
+				likeStatus = 0;
+			}
+			
+			let reviewId = getParams("review_id")[0];
+
+			if($('#rate_comment_input').val() == "" || $('#rate_comment_input').val() == null) {
+				alert("댓글을 작성해주세요.");
+				return;
+			}
+			
+			if(confirm(/*[[ #{ask.regist} ]]*/)) {
+				let rRatingInfo = {
+					'review_id' : reviewId,
+					'like_status' : likeStatus,
+					'comment' : $('#rate_comment_input').val()
+				};
+				
+				
+				let reqJsonStr = JSON.stringify(rRatingInfo);
+				log(rRatingInfo);
+				let url = prefix + '/api/review/rate.do';
+				
+				$.ajax({
+			        url: url,
+			        type:'post',
+			        data: reqJsonStr,
+			        contentType:"application/json",
+			        success:function(data){
+			        	log(data);
+			        	if(data['state'] == STATE_SUCCESS){
+			        		alert(/*[[ #{res.regist} ]]*/);
+			        		//$("#rate_review_btn").hide();
+			        		hideEvalueLayer();
+			        		updateLikeStat(data['data']);
+			        	} else{
+			        		alertErrorMessage(data['error_message']);
+			    		}
+			        },
+			        error:function(request, status, error){
+			        	alertNetworkErr();
+			        }
+			    });
+				
+			}
+		}
+	}
+
+
+	function contentShare(shareMedia) {
+		
+		log("[contentShare]");
+	
+		// 먼저 공유 정보를 DB에 저장
+		var url = prefix + "/api/share/gen_share_link.do";
+		let param = {
+				content_id : reviewId,
+				content_type : TYPE_REVIEW,
+				share_media : shareMedia
+		}
+		param = JSON.stringify(param);
+	
+		$.ajax({
+	        url: url,
+	        type:'post',
+	        data: param,
+	        contentType:"application/json",
+	        success:function(data){
+	        	if(data['state'] == STATE_SUCCESS) {
+	        		if(shareMedia == 1) {
+	        			window.open( 'http://www.facebook.com/sharer.php?u=' + encodeURIComponent(data['data']) );	
+	        		} else {
+	        			
+	        			let kkShareData = {
+	        				'title': reviewTitle,
+	        				'desc' : "리뷰 자세히 보기",
+	        				'image' : repImgPath,
+	        				'link' : data['data']
+	        			};
+	        			shareKakaotalk(kkShareData);
+	        			
+	        		}
+	        		onOffLayer("div_share_layer");
+	    		} else {
+	    			alertErrorMessage(data['error_message'], true);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+		
+
+	
+	}
+	
+	function goToReviewWrite() {
+		if(userLoginType == LOGIN_TYPE_TEMP){
+			openLayer("div_login_layer");
+		} else {
+			window.location.replace(prefix + "/m/review/write_page.do?prodId=" + prodId + "&reviewId=" + reviewId);
+		}
+	}
+
+	function subscribe(chId){
+		if(userLoginType == LOGIN_TYPE_TEMP){
+			openLayer("div_login_layer");
+		} else {
+			log("[channel id]:"+chId);
+			
+			let reqUrl = prefix + "/api/channel/subscribe.do?channel_id="+chId;
+			log(reqUrl);
+			
+			$.ajax({
+		        url: reqUrl,
+		        type:'get',
+		        contentType:"application/json",
+		        success:function(data){
+		        	log("[Subscribe Result]");
+		        	log(data);
+		        	if(data['state'] == STATE_SUCCESS){
+		        		if(data['data']['subscribed'] == STATUS_SUBSCRIBE){
+		        			alert("구독되었습니다.")
+		        		} else {
+		        			alert("구독 취소되었습니다.")
+		        		}
+		        		printSubscribeBtn(data);
+		        	} else{
+		        		alertErrorMessage(data['error_message']);
+		    		}
+		        },
+		        error:function(request, status, error){
+		        	alertNetworkErr();
+		        }
+		    });
+		}		
+	}
+	
+	function getLikes(){
+		if(userLoginType == LOGIN_TYPE_TEMP){
+			openLayer("div_login_layer");
+		} else {
+			log("[review id]:"+reviewId);
+			
+			
+			let urlParam = 'paging.nowPage=' + nowPage + 
+	    	'&reviewId='+ reviewId +
+	    	'&paging.perPage=' + COMMENT_PER_PAGE +
+	    	'&orderby.field=reg_date'+
+	    	'&orderby.sorting=desc';
+			
+			let reqUrl = prefix + "/api/review/review_like.do?"+urlParam;
+			log(reqUrl);
+			
+			$.ajax({
+		        url: reqUrl,
+		        type:'get',
+		        contentType:"application/json",
+		        success:function(data){
+		        	log("[Get Likes Result]");
+		        	log(data);
+		        	if(data['state'] == STATE_SUCCESS){
+		        		nowPage++;
+		        		printLikes(data['list']);
+		        	} else{
+		        		alertErrorMessage(data['error_message']);
+		    		}
+		        },
+		        error:function(request, status, error){
+		        	alertNetworkErr();
+		        }
+		    });
+		}		
+	}
+	
+	function printLikes(likeList){
+		let listSize = likeList.length;
+		if(listSize < COMMENT_PER_PAGE){
+			$("#likes_more").css("display","none");
+		}
+		if(listSize > 0){
+			//lastCommId = likeList[listSize - 1]['like_id'];
+			let likeItemList = "";
+			
+			for(let i=0; i<likeList.length; i++) {
+				let likeInfo = likeList[i];
+				likeItemList = likeItemList + makeLikeLi(likeInfo);
+			}
+			
+			$("#ul_likes").append(likeItemList);
+		}		
+	}
+	
+
+	function updateLikeStat(likeStat){
+		
+		log("updateLikeStat");
+				
+		
+		let likeInfo = likeStat['like_info'];		
+		let comment = likeStat['comment'];
+		let likeCount = likeStat['like_count'];
+		let dislikeCount = likeStat['dislike_count'];	
+		
+		// #명이 공감하였습니다.
+		$("#review_like_count").text(numberWithCommas(likeCount) + "명이 공감하였습니다.");
+		
+		// 공감 그래프 변경		
+		let total = likeCount + dislikeCount;
+		let likeRate;
+		let dislikeRate;
+		
+		if(likeCount == 0 && dislikeCount == 0) {
+			likeRate = 0;
+			dislikeRate = 0;
+		} else {
+			likeRate = parseInt((likeCount/total) * 100);
+			dislikeRate = 100 - likeRate;				
+		}
+		
+		let barHtml = '';		
+		
+		if(likeRate != 0) {
+			barHtml = barHtml + '<span class="r_type type_1" style="width:'+likeRate+'%;"><em>공감해요</em>'+likeRate+'%</span>';
+		}
+		
+		if(dislikeRate != 0) {
+			barHtml = barHtml + '<span class="r_type type_3" style="width:'+dislikeRate+'%;"><em>별로예요</em>'+dislikeRate+'%</span>';
+		}
+		
+		$("#div_rate_bar").html(barHtml);
+		
+		// 댓글 업데이트 
+		let likeItem = makeLikeLi(likeInfo);
+		$("#ul_likes").prepend(likeItem);
+		
+		// 공감평가 버튼 비활성화
+		let evalBtnHtml = '<span class="evalue_s_on">공감평가완료</span>';
+		$("#div_eval").html(evalBtnHtml);
+		 
+				
+	}
+		
+
+	function makeLikeLi(likeInfo){
+		
+		let regDate = moment(likeInfo['reg_date']).format('YYYY.MM.DD');
+		let profileImage = prefix + '/image/img_general_profile_default.png';
+		if(likeInfo['profile_image_path'] != null) {
+			profileImage = imgPrefix + "/" + likeInfo['profile_image_path'] + "_300.png?refreshCode="+refreshCode;
+		}
+		let content = likeInfo['comment'];
+		
+		let appendLi = '<li id="li_like_'+likeInfo['like_id']+'">' +
+			   '	<div class="list_type_product_land">' +
+			   '	<div class="profile"><img src="'+profileImage+'" alt=""></div>' +
+			   '	<div class="text" >' +
+			   '		<p class="title ellipsis_1">'+likeInfo['nick_name']+'<em>L.'+likeInfo['level']+'</em></p>' +
+			   '		<p class="date"><i>'+regDate+'</i>';
+			   
+			   if(likeInfo['like_status'] == 0){
+				   appendLi = appendLi + '			<span class="agree" th:if="${likeInfo.likeStatus == 0}"><em></em>공감해요</span>';	   
+			   } else if(likeInfo['like_status'] == 1){
+				   appendLi = appendLi + '			<span class="disagree" th:if="${likeInfo.likeStatus == 1}"><em></em>별로예요</span>';
+			   }
+			   
+			   appendLi = appendLi + '		</p>' +
+			   '	</div>' +
+			   '</div>' +
+			   '<div class="desc menty">';
+			   
+			   if(content != null) {
+				   appendLi = appendLi + '' + content;  
+			   }
+			   
+			   appendLi = appendLi + '</div>' + '</li>'; 
+	        
+	        
+		if(likeInfo['my_comment'] == true){
+			appendLi += '<div class="prd_line" onclick="delLike('+likeInfo['like_id']+')"><p style="text-align: center;">삭제</p></div>';
+		}
+        	appendLi += '</li>';
+        	
+		
+        return appendLi;
+	}
+	
+	function delLike(likeId){
+		/* var answer = confirm("정말 삭제하시겠습니까?")
+		if(answer){
+			var reqParam = {
+					commentId : comId
+			}
+			
+			var reqUrl = prefix+"/api/review/deleteComm.do"
+			
+			$.ajax({
+				url:reqUrl,
+				type : "post",
+				data : reqParam,
+				success : function(data){
+					if(data.state==0){
+						$("#li_like_"+likeId).remove();
+					}else if(data.state==40006){
+						alert("삭제 권한이 없습니다.");
+					}else{
+						alert("로그인 되지 않은 사용자입니다.");
+					}
+				},
+				error : function(request,status,error){
+					alertNetworkErr();
+				}
+			})
+		} */		
+	}
+	
+	function printSubscribeBtn(data){
+		let channelInfo = data['data'];
+		let channel = channelInfo['channel'];
+		if(channelInfo['subscribed'] == STATUS_SUBSCRIBE){
+			let suberNum = channel['subscriber'];
+			//$("#subscriberNum").html('<strong>구독자</strong>' + suberNum);
+			$("#subscribing").addClass("off");
+			$("#subscribing").addClass("btn_type_gray_none_fill");
+			$("#subscribing").removeClass("btn_type_gray_fill");
+			$("#subscribing").text("구독 해지하기")
+		} else {
+			let suberNum = channel['subscriber'];
+			//$("#subscriberNum").html('<strong>구독자</strong>' + suberNum);
+			$("#subscribing").removeClass("off");
+			$("#subscribing").removeClass("btn_type_gray_none_fill");
+			$("#subscribing").addClass("btn_type_gray_fill");
+			$("#subscribing").text("채널 구독하기")
+		}
+	}
+	
+	/////draw review
+	function setReviewImg(){
+		let imgs = $("#div_review_content").find("img");		
+		for(let i=0; i<imgs.length; i++) {
+			if($(imgs[i]).attr("data-manage") == 'true') {
+				let relUrl = $(imgs[i]).attr("src");
+				let asbUrl = imgPrefix + '/' + relUrl + "_800.png";
+				if(relUrl.startsWith('/')) {
+					asbUrl = imgPrefix + relUrl + "_800.png";
+				}
+				$(imgs[i]).attr("src", asbUrl);
+			}
+		}
+	}
+	
+	function showEvalueLayer(){
+		if(userLoginType == LOGIN_TYPE_TEMP) {
+			loginConfirm();
+		} else {
+			posY = $(window).scrollTop();
+			wHeight = window.innerHeight;	
+
+			jQuery("html, body").addClass("not_scroll");
+			jQuery(".wrap_layer_f").css({position:"absolute",display:"block",overflow:"auto",height:wHeight,top:"posY"});
+		}
+	}
+	
+	function hideEvalueLayer(){
+		jQuery("html, body").removeClass("not_scroll");
+		jQuery(".wrap_layer_f").css("display","none");
+		posY = $(window).scrollTop(posY);
+		$('#rate_comment_input').val('');
+		$("#div_rate_like").removeClass("wlike_on");
+		$("#div_rate_dislike").removeClass("wlike_on");
+	}
+	
+	function loginConfirm(){
+		$("#div_login_layer").css("display","");
+	}
+
+</script>
+<body th:with="reviewItem = ${reviewInfo.reviewItem}, channel = ${reviewInfo.channel}, memberAct = ${reviewInfo.memberAct}">   
+            
+    <!-- S:Layer 채널정보 및 구독-->
+    <div id="div_subscribe_layer" class="wrap_layer" style="display: none;">
+        <div class="wrap_box">
+            <div class="layer_close"><span class="layer_off"></span></div>
+            <div class="layer_box">
+                <p class="ch_tit"><strong th:text="|${reviewItem.nickName}&nbsp|">haemire</strong><sapn th:text="#{'reveiw.all_review'}"></sapn></p>
+                <p class="ch_desc" th:text="${channel.chDesc != null} ? ${channel.chDesc} : #{channel.msg.no_introduce}"></p>
+            </div>
+            <div class="btn">
+                <a href="javascript:$('#div_subscribe_layer').css('display','none');" class="btn_type_bg btn_type_gray_none_fill" th:text="#{btn.close}">취소</a>
+                
+                
+                <!-- <a th:onclick="|javascript:subscribe('${authorChannel.channel.channelId}')|" class="btn_type_bg btn_type_orange_fill layer_off" th:text="#{member.chanel_subscrib}">구독</a> -->
+           		
+				<th:block th:if="${channel.owner != userSeq}">
+	                <th:block th:if="${channel.subscribed > 0}">
+	                	<a id="subscribing" th:href="|javascript:subscribe(${channel.channelId})|" class="btn_type_bg btn_type_gray_none_fill subscribe off" th:text="#{channel.btn.unsubscribe}">구독 해지하기</a>
+	                </th:block>
+	                <th:block th:if="${channel.subscribed <= 0}">
+	                 	<a id="subscribing" th:href="|javascript:subscribe(${channel.channelId})|" class="btn_type_bg btn_type_gray_fill subscribe" th:text="#{channel.btn.subscribe}">채널 구독하기</a>	
+	                </th:block>	
+                </th:block>
+
+                <a th:href="|javascript:moveChannelByReviewId(${reviewItem.reviewId})|" class="btn_type_bg btn_type_gray_fill" th:text="#{btn.move_to_channel}">채널바로가기</a>
+            </div>
+            <div id="div_review_modify" class="wrap_oauth">
+                <a href="javascript:goToReviewWrite()" id="review_modify_btn" class="btn_log auth_m" th:if="${reviewInfo.canModify}" th:text="#{btn.review.modify}">리뷰 수정하기</a>
+            </div>
+        </div>
+        <div class="wrap_dimmed"></div>
+    </div>
+    
+    <!-- S:Layer 로그인 -->
+    <div id="div_login_layer" class="wrap_layer" style="display: none;">
+
+        <!-- 해당 Div만 각 레이어에 사용하면 된다. -->
+        <div class="wrap_box">
+            <div class="layer_close"><span class="layer_off"></span></div>
+            <div class="layer_box">
+                <p class="ch_tit" style="text-align:center;border:none;"><strong th:text="#{common.login}">로그인</strong><th:block th:text="#{common.msg.need}">이 필요합니다.</th:block></p>
+            </div>
+            <div class="btn">
+                <a class="btn_type_bg btn_type_gray_none_fill layer_off" th:text="#{btn.close}">취소</a>
+                <a th:href="@{/m/login_page.do}"class="btn_type_bg btn_type_orange_fill layer_off" th:text="#{common.login}">로그인</a>
+            </div>
+        </div>
+        
+        <div class="wrap_dimmed"></div>
+    </div>
+    
+    <!--  S:Layer 공유 레이어 -->
+    <div id="div_share_layer" class="wrap_layer" style="display: none;">
+        <div class="wrap_box">
+            <div class="layer_close"><span class="layer_off"></span></div>
+            <div class="layer_box">
+                <p class="ch_tit" style="text-align:left;"><strong>공유</strong> 하기</p>
+                <div class="wrap_log">
+
+                    <div style="height:10px;"></div>
+
+                    <div class="wrap_oauth">
+                        <a href="javascript:contentShare(0)" class="btn_log oauth_k">KAKAO</a>
+                        <a href="javascript:contentShare(1)" class="btn_log oauth_f">FACEBOOK</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="wrap_dimmed"></div>
+    </div>
+    
+    
+    <!-- S:Layer -->
+    <div id="div_eval_layer" class="wrap_layer_f" style="display: none;">
+        <div class="wrap_box_f">
+
+            <div class="head_wrap">
+                <a href="javascript:hideEvalueLayer()" class="btn_close"></a>
+                <div class="title_wrap">
+                    <h1 class="title_detail">리뷰 평가</h1>
+                </div>
+            </div>
+    
+            <div class="content">
+    
+                <div class="report" style="padding-top:50px;">
+                    <h6 class="ellipsis_1" style="font-size:1.2rem;padding:0 20px 5px 20px;" th:text="${reviewItem.title}"></h6>
+                    <p class="prate_step">이 리뷰가 공감이 되었나요?</p>
+    
+                    <ul class="wrap_like">
+                        <li>
+                            <div id="div_rate_like" class="wlike" onclick="selectReviewRating('like');">
+                                <!-- wlike_on -->
+                                <p class="emoji_like"></p>
+                                <p class="num" th:text="${reviewItem.likeCountAsString}">123,456</p>
+                            </div>
+                        </li>
+                        <li>
+                            <div id="div_rate_dislike" class="wlike" onclick="selectReviewRating('dislike');">
+                                <!-- wlike_on -->
+                                <p class="emoji_unlike"></p>
+                                <p class="num" th:text="${reviewItem.dislikeCountAsString}">123,456</p>
+                            </div>
+                        </li>
+                    </ul>                
+    
+                    <div class="wrap_pment" style="margin:10px 15px 130px 15px;">
+                        <p class="eval_op">
+                            <strong>공감이 되었나요?, 어떤 점이 공감이 되나요?</strong>
+                            <!-- <strong>별로인가요?, 어떤 점이 별로인가요?</strong>-->
+                        </p>
+                        <textarea rows="5" cols="auto" id="rate_comment_input" class="i_textarea input_type_n comment" placeholder="공감 의견을 입력하세요. (10자 이상)"></textarea>
+                        <a href="javascript:rateReview()" class="btn_type_sm btn_type_gray_fill">등록</a>
+                    </div>
+    
+                </div>
+                
+            </div>
+            
+        </div>
+    </div>
+
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a href="javascript:history.back()" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail">Review</h1>
+                <div class="search_wrap_s">
+                    <a href="javascript:showSearchPopup(true)" class="btn_search"></a>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+        
+        	<th:block th:replace="/main/auto_complate.html"></th:block>
+        	
+        	
+        	
+
+            <div id="div_search_result" class="wrap_content">
+
+                <div class="basic_area">
+
+                    <div class="wrap_content_padding">
+						
+                        <h3 class="pd_title_s"><div class="pd_tit"><span class="icon_p">P</span><a class="ellipsis_1"><th:block th:text="${prodItem.dispProdName}"/></a></div><div class="evalue"><span th:class="|rate_star rate_star_${prodItem.ratingToStarImgCls}|"></span><th:block th:text="${prodItem.ratingAvgAsString}"/></div></h3>
+
+                        <h2 class="pd_title"><span class="icon_rtype" th:text="${reviewItem.rContentType}"></span><th:block th:text="${reviewItem.title}"/></h2>
+
+                        <p class="wrap_loginis wrap_loginis2">
+                            <img th:src="|${reviewItem.profileImagePath}?refreshCode=${refreshCode}|" class="profile">
+                            <span class="level" th:text="'L.' + ${reviewItem.memberLevel}">L.5</span>
+                            <span class="nickname" th:text="${reviewItem.nickName}"></span>
+                            <span class="date" th:text="${reviewItem.dispRegDate}"></span>
+                            <em onclick="javascript:onOffLayer('div_subscribe_layer')" class="more"></em>
+                            <!-- layer_on/off는 실제 CSS 제어 없이 단순 선택자입니다. -->
+                        </p>
+                        
+                        <div id="div_review_content" class="rv_body" th:utext="${reviewInfo.contents}">
+                            <!-- 여기에 리뷰 내용이 들어갑니다. -->
+                            <!-- <img src="../image/review_sam.png" alt=""> -->
+                        </div>
+
+                        <div class="pd_rate">
+                            <div id="div_eval" class="pd_rate_box">
+                                <a href="javascript:showEvalueLayer()" th:if="${memberAct.ratingCount <= 0}" class="evalue_s">공감평가</a>
+                                <span th:if="${memberAct.ratingCount > 0}" class="evalue_s_on">공감평가완료</span>                      
+                            </div>                            
+                        </div>
+
+                        <div class="btn_group">
+
+                            <div class="btn_group_l">
+                                <div class="pd_rate_box pd_r_r">
+                                    <div class="pd_rate_star">
+                                        <em>이 리뷰는 ?</em>
+                                    </div>
+                                    <div id="review_like_count" class="pd_rate_num" style="padding:5px 0 0 0;">
+                                    <th:block th:text="${reviewItem.likeCount}+#{review.like.count}"/>
+                                    </div>                        
+                                </div>  
+                            </div>                          
+
+                            <div class="btn_group_r">
+                                <p id="p_stat" class="p_sdata">
+                                    <strong>조회</strong><th:block th:text="${reviewItem.viewCountAsString}"/><br><strong>좋아요</strong><th:block th:text="${reviewItem.pickCountAsString}"/>
+                                </p>
+                               	<a th:if="${reviewInfo.pick}" onclick="pickReview(this)" id="pick_review_btn" class="like like_on"></a>
+                               	<a th:if="${!reviewInfo.pick}" onclick="pickReview(this)" id="pick_review_btn" class="like"></a>
+                                
+                                <a href="javascript:onOffLayer('div_option')" class="more"></a>
+                                <div id="div_option" class="layer_option" style="display:none;">
+                                     <a href="javascript:onOffLayer('div_share_layer');onOffLayer('div_option')" th:text="#{btn.share}">공유</a>
+                                    <a href="javascript:reportContent();onOffLayer('div_option')" th:text="#{btn.report}">신고</a>
+                                    <a href="javascript:onOffLayer('div_option')" th:text="#{btn.close}">취소</a>
+                                </div>
+                            </div>
+
+                        </div>
+						
+                    </div>                    
+
+                </div>
+
+                <script>
+                //탭, 위치 제어를 위한 스크립트
+                jQuery( document ).ready( function() {
+                    var jbOffset = jQuery( '.jbMenu' ).offset();
+                    var cbOffset1 = jQuery( '#conbox1' ).offset();
+                    var cbOffset2 = jQuery( '#conbox2' ).offset();
+                    var cbOffset3 = jQuery( '#conbox3' ).offset();
+                    var cbOffset4 = jQuery( '#conbox4' ).offset();
+                    jQuery( window ).scroll( function() {
+                        if ( jQuery( document ).scrollTop() > jbOffset.top ) {
+                            jQuery( '.jbMenu' ).addClass( 'jbFixed' );
+                            jQuery( '.jbContent' ).css( 'margin-top','60px' );
+                        }
+                        else {
+                            jQuery( '.jbMenu' ).removeClass( 'jbFixed' );
+                            jQuery( '.jbContent' ).css( 'margin-top','0px' );
+                        }
+                        if ( jQuery( document ).scrollTop() > cbOffset1.top ) {
+                            jQuery( '.tab_menu_btn' ).removeClass('on').css( 'opacity','.5' );
+                            jQuery( '.tab_01' ).css( 'opacity','1' );
+                            jQuery( '.tab_01' ).addClass('on');                        
+                        } 
+                        if ( jQuery( document ).scrollTop() > cbOffset2.top-50 ) {
+                            jQuery( '.tab_menu_btn' ).removeClass('on').css( 'opacity','.5' );
+                            jQuery( '.tab_02' ).css( 'opacity','1' );
+                            jQuery( '.tab_02' ).addClass('on');                        
+                        }   
+                        if ( jQuery( document ).scrollTop() > cbOffset3.top-50 ) {
+                            jQuery( '.tab_menu_btn' ).removeClass('on').css( 'opacity','.5' );
+                            jQuery( '.tab_03' ).css( 'opacity','1' );
+                            jQuery( '.tab_03' ).addClass('on');                        
+                        }    
+                        if ( jQuery( document ).scrollTop() > cbOffset4.top-50 ) {
+                            jQuery( '.tab_menu_btn' ).removeClass('on').css( 'opacity','.5' );
+                            jQuery( '.tab_04' ).css( 'opacity','1' );
+                            jQuery( '.tab_04' ).addClass('on');                        
+                        } 
+                    });                    
+
+                    jQuery('.tab_menu_btn').on('click',function(){
+                        jQuery( document ).scrollTop(jbOffset.top);
+                        //버튼 색 제거,추가
+                        jQuery('.tab_menu_btn').removeClass('on');
+                        jQuery(this).addClass('on')
+                        
+                        //컨텐츠 제거 후 인덱스에 맞는 컨텐츠 노출
+                        var idx = jQuery('.tab_menu_btn').index(this);
+                        
+                        jQuery('.tab_box').hide();
+                        jQuery('.tab_box').eq(idx).show();
+                    });
+                    
+                });  
+
+                function fnMove(seq){
+                    //jQuery( '.jbMenu' ).addClass( 'jbFixed' );
+                    var offset = $("#conbox" + seq).offset();
+                    $('html, body').animate({scrollTop : offset.top-45}, 400);
+                    //$('html, body').scrollTo(offset.top,0);
+                    //alert(offset.top);
+                }                  
+                </script>
+
+                <div class="tab_wrap">
+                    <div class="jbMenu">            
+                        <div class="tab_menu_container">
+                            <button class="tab_01 tab_menu_btn on" type="button" onclick="fnMove('1')"><span>이 리뷰 제품</span></button>
+                            <button class="tab_02 tab_menu_btn" type="button" onclick="fnMove('2')"><span>리뷰</span></button>
+                            <button class="tab_03 tab_menu_btn" type="button" onclick="fnMove('3')"><span>유사/추천 제품</span></button>
+                            <button class="tab_04 tab_menu_btn" type="button" onclick="fnMove('4')"><span>공감/의견</span></button>
+                        </div>
+                    </div>
+
+                    <div class="jbContent">
+                        <div id="conbox1" class="conbox_f">
+
+                            <div class="conbox">
+                                
+                                <h3><span>이 리뷰 제품</span></h3>
+
+                                <div class="tap_box_body">
+
+                                    <!-- S:List Flat -->
+                                    <ul class="list_type_flat_exactly">
+                                        <li>
+                                            <div class="list_ea_flat">
+                                            	<a th:href="@{/m/prod/product.do?prod_id=} + ${reviewItem.prodId}">
+	                                                <div class="title">
+	                                                    <p class="ellipsis_1"><th:block th:text="${prodItem.dispProdName}"/></p>
+	                                                </div>
+	                                                <div class="img_desc" style="text-align: center;">
+	                                                    <div class="img">
+	                
+	                                                        <!-- Swiper -->
+	                                                        <div class="swiper-container">
+	                                                            <div class="swiper-wrapper">
+	                                                                <div class="swiper-slide" th:if="${#lists.size(prodImages) <= 0}">
+									                            		<img th:src="@{/image/img_general_product_default.png}" alt="">
+									                            	</div>
+									                            	<th:block th:each="imgPath : ${prodImages}">
+										                                <div class="swiper-slide">
+										                                    <img th:src="${imgPath}" alt="">
+										                                </div>    
+									                                </th:block> 
+	                                                            </div>
+	                                                            <!-- Add Pagination -->
+	                                                            <div class="swiper-pagination"></div>
+	                                                        </div>
+	                                
+	                                                        <!-- Initialize Swiper -->
+	                                                        <script>
+	                                                        var swiper = new Swiper('.swiper-container', {
+	                                                            pagination: '.swiper-pagination',
+	                                                            paginationClickable: true
+	                                                        });
+	                                                        </script>
+	                
+	                                                    </div>
+	                                                </div>  
+                                                </a>  
+                                                <div class="evalue"><span th:class="|rate_star rate_star_${prodItem.ratingToStarImgCls}|"></span><th:block th:text="${prodItem.ratingAvgAsString}"/><i>(<th:block th:text="${prodItem.ratingCountAsString}"/>)</i></div>
+                                                <div class="data"><strong>조회</strong><th:block th:text="${prodItem.viewCountAsString}"/><span>|</span><a><strong>한마디</strong><th:block th:text="${prodItem.commentCountAsString}"/></a><span>|</span><strong>공유</strong><th:block th:text="${prodItem.shareCountAsString}"/><span>|</span><strong>좋아요</strong><th:block th:text="${prodItem.likeCountAsString}"/></div>
+                                                <div class="cate">가전.TV > 음향가전 > 이어폰/헤드폰</div>                              
+                                                <div class="r_spec">
+                
+                                                    <script>
+                                                    //피쳐 정보 확장/축소
+                                                    jQuery(document).ready(function(){
+                                                        jQuery(".pmore").click(function(){
+                                                            jQuery(".ss_feature").each(function(){
+                                                                jQuery(this).toggleClass('ss_feature_exp');  
+                                                            });
+                                                            jQuery(".pmore").each(function(){
+                                                                jQuery(this).toggleClass('pmore_c');      
+                                                            });
+                                                        });
+                                                    });
+                                                    </script>
+                
+                                                    <div class="sum_spec">
+                                                        <a class="pmore"></a>
+                                                        <div class="ss_feature" th:text="${reviewInfo.featureDpString}">
+                                                            
+                                                        </div>
+                                                    </div>
+                
+                                                </div>              
+                                            </div>                            
+                                        </li>
+                                    </ul>
+
+                                </div>                 
+
+                            </div>
+
+                        </div>
+                        <div id="conbox2" class="conbox_f" th:style="${#lists.size(reviewInfo.videoList) != 0 and #lists.size(reviewInfo.articleList) != 0} ? '' : 'display:none'">
+
+                            <div class="conbox" >
+                            
+ 								<h3><span th:text="#{common.tab.review}">리뷰</span></h3>
+                                
+                                <div class="tap_box_body">    
+                                                                
+								<th:block th:if="${#lists.size(reviewInfo.videoList) > 0}">
+                                    <div class="group_title">
+                                        <p class="title" th:text="#{review.type.video}">동영상</p>
+                                        <a th:href="|@{/m/prod/video_list_more.do}?prodId=${reviewInfo.reviewItem.prodId}&reviewId=${reviewInfo.reviewItem.reviewId}|" class="more" th:text="#{btn.more}">더보기<em></em></a>
+                                    </div>
+                                    <ul class="list_type_flat">       
+                                        <th:block th:each="item: ${reviewInfo.videoList}">
+                                        	<th:block th:replace="/common/item_content.html"></th:block>
+                                        </th:block>                                     
+                                    </ul>
+                    			</th:block>
+                    			<th:block th:if="${#lists.size(reviewInfo.articleList) > 0}">
+                                    <div class="group_title">
+                                        <p class="title" th:text="#{review.type.blog}">블로그</p>
+                                        <a th:href="|@{/m/prod/article_list_more.do}?prodId=${reviewInfo.reviewItem.prodId}&reviewId=${reviewInfo.reviewItem.reviewId}|" class="more" th:text="#{btn.more}">더보기<em></em></a>
+                                    </div>                 
+                                </div>   
+                                        <!-- S:List Flat -->
+                                    <ul class="list_type_flat">
+                                        <th:block th:each="item: ${reviewInfo.articleList}">
+                                        	<th:block th:replace="/common/item_content.html"></th:block>
+                                        </th:block>
+                                    </ul>
+                				</th:block>
+                                </div>                   
+
+                            </div>
+
+                        </div>
+                        <div id="conbox3" class="conbox_f" th:style="${#lists.size(reviewInfo.recommProdList) != 0 and #lists.size(reviewInfo.similarProdList) != 0} ? '' : 'display:none'">
+
+                            <div class="conbox">
+
+							
+                                <h3><span th:text="#{common.tab.recommend}">유사/추천제품</span></h3>
+
+                                <div class="tap_box_body">
+									<th:block th:if="${#lists.size(reviewInfo.recommProdList) > 0}">
+	                                    <!-- 더보기는 타이틀까지 링크 영역을 지정 -->
+	                                    <div class="group_title">
+	                                        <p class="title" th:text="#{prod.similar}">유사 제품</p>
+	                                        <a th:href="|@{/m/prod/similar_prod_more.do}?prodId=${reviewInfo.reviewItem.prodId}|" class="more" th:text="#{btn.more}">더보기<em></em></a>
+	                                    </div>
+	                    
+	                                    <!-- S:List Flat -->
+	                                    <ul class="list_type_flat">
+	                                       <th:block th:each="item: ${reviewInfo.recommProdList}">
+	                                        	<th:block th:replace="/common/item_content.html"></th:block>
+	                                        </th:block>
+	                                    </ul>
+									</th:block>
+									<th:block th:if="${#lists.size(reviewInfo.similarProdList) > 0}">
+	                                    <!-- 더보기는 타이틀까지 링크 영역을 지정 -->
+	                                    <div class="group_title">
+	                                        <p class="title" th:text="#{prod.recommend}">추천 제품</p>
+	                                        <a th:href="|@{/m/prod/recomm_prod_more.do}?prodId=${reviewInfo.reviewItem.prodId}|" class="more" th:text="#{btn.more}">더보기<em></em></a>
+	                                    </div>
+	                    
+	                                    <!-- S:List Flat -->
+	                                    <ul class="list_type_flat">  
+	                                    	<th:block th:each="item: ${reviewInfo.similarProdList}">
+	                                        	<th:block th:replace="/common/item_content.html"></th:block>
+	                                        </th:block>
+	                                    </ul>
+	                                </th:block>  
+                                </div>     
+                            </div>
+
+                        </div>
+                        <div id="conbox4" class="conbox_f">
+
+                            <div class="conbox">
+
+                                <h3><span>공감/의견</span></h3>
+
+                                <div class="tap_box_body">
+
+                                    <div class="p_box">
+                                        <div class="wrap_prate" >
+
+                                            <h4 style="margin:15px 0 10px 0;padding-top:0;">
+                                                공감 비율
+                                                <a href="javascript:showEvalueLayer()" class="more">공감평가</a>
+                                            </h4>     
+                                            
+                                            <div id="div_rate_bar" class="wrap_bar" style="margin-bottom:40px;">
+                                            	<th:block th:if="${reviewItem.likeCount != 0 || reviewItem.dislikeCount != 0}">
+	                                                <span class="r_type type_1" th:if="${reviewItem.likeCount != 0 || reviewInfo.dislikeRate < 90}" th:style="|width:${reviewInfo.likeRate}%;|"><em>공감해요</em><th:block th:text="${reviewInfo.likeRate}+'%'"/></span>
+	                                                <span class="r_type type_3" th:if="${reviewItem.dislikeCount != 0 || reviewInfo.likeRate < 90}" th:style="|width:${reviewInfo.dislikeRate}%;|"><em>별로예요</em><th:block th:text="${reviewInfo.dislikeRate}+'%'"/></span>
+	                                            </th:block>
+                                            </div>
+            								<!-- th:text="${#calendars.format(reviewInfo.review.regDate,'YYYY.MM.dd')}" -->
+                                            <ul id="ul_likes" class="ullist_type_product_land reple_box">
+                                                <li th:each="likeInfo : ${likeList}">                                
+                                                    <div class="list_type_product_land">
+                                                        <div class="profile"><img th:src="${likeInfo.profileImagePath != null} ? ${imgPrefix}+'/'+${likeInfo.profileImagePath}+'_300.png?refreshCode='+${refreshCode} : @{/image/img_general_profile_default.png}" alt=""></div>
+                                                        <div class="text" >
+                                                            <p class="title ellipsis_1" th:utext="|${likeInfo.nickName}<em>L.${likeInfo.level}</em>|"><em>L.1</em></p>
+                                                            <p class="date"><i th:text="${#calendars.format(likeInfo.regDate,'YYYY.MM.dd')}"></i>
+                                                            	<span class="agree" th:if="${likeInfo.likeStatus == 0}"><em></em>공감해요</span>
+                                                            	<span class="disagree" th:if="${likeInfo.likeStatus == 1}"><em></em>별로예요</span>
+                                                            </p>
+                                                        </div>                                    
+                                                    </div>
+                                                    <div class="desc menty" th:text="${likeInfo.comment}">
+                                                        
+                                                    </div>
+                                                    
+                                                   <div class="prd_line">
+                                                        <a th:if="${likeInfo.myComment == true}" href="" class="delete">삭제</a>
+                                                        <a th:if="${false}" href="" class="reply">관리자 답변</a>
+                                                    </div>
+
+                                                    <div th:if="${false}" class="wrap_pment" style="margin:10px 0;">
+                                                        <textarea rows="5" cols="auto" class="i_textarea input_type_n comment" placeholder="관리자 답변을 입력하세요."></textarea>
+                                                        <a href="" class="btn_type_sm btn_type_gray_fill">등록</a>
+                                                    </div>
+                                                                                                      
+                                                </li>
+                                            </ul>
+            								<th:block th:if="${#lists.size(likeList) > 4}">
+                                            	<a href="javascript:getLikes()" id="likes_more" class="list_more" >더보기 +</a>
+											</th:block>
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                        
+                    </div>
+                    
+                </div>
+
+            </div>
+            
+        </div>
+
+
+        <th:block th:replace="/common/footer.html"></th:block>        
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+
+
+</body>
+
+</html>

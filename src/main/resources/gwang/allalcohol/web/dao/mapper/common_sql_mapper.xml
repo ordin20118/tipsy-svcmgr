@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<mapper namespace="common.sql">
+
+	<sql id="pagingQuery">
+		<if test="paging != null">
+			LIMIT #{paging.firstRow}, #{paging.perPage}
+		</if>
+	</sql>
+	<sql id="orderbyQuery">
+		<if test="orderby != null and orderby.stmt != null">
+			ORDER BY ${orderby.stmt}
+		</if>
+	</sql>
+
+
+</mapper>

@@ -1,0 +1,20 @@
+					<th:block th:if="${sResult.prodList} != null and ${sResult.prodList.size()} != 0">
+						<div class="list_wrap">
+			                <div class="list_wrap_line">
+			                <!-- 더보기는 타이틀까지 링크 영역을 지정 -->
+			                <div class="group_title">
+			                    <p class="title">제품</p>
+			                    <th:block th:if="${sParam.sTarget} == null">
+			                    	<a th:href="|?sTarget=prod&keyword=${sParam.orgKeywordStr}&categId=${sParam.categIdStr}|" class="more" >더보기<em></em></a>
+			                    </th:block>
+			                </div>
+			                 <!-- S:List Flat -->
+			                 <ul id="ul_result_prod" class="list_type_flat">
+				                 <th:block th:each="item: ${sResult.prodList}">
+									<th:block th:replace="/common/item_content.html"/>
+				                    
+				                </th:block>
+			                </ul>
+			                </div>
+			            </div>
+            		</th:block>

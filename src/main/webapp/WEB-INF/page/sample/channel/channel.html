@@ -1,0 +1,383 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<script th:inline="javascript">
+	var channelInfo = /*[[${channelInfo}]]*/
+	var actInfo =  /*[[${actInfo}]]*/
+	var categMap =  /*[[${categNameMap}]]*/
+	
+	const STATUS_SUBSCRIBE = 1;
+	const STATUS_UNSUBSCRIBE = 0;
+
+	$(document).ready(function(){
+		log(channelInfo);
+		log(actInfo);
+		log(categMap);
+		
+		if(channelInfo['channel']['tags'] != null){
+			printTags(channelInfo['channel']['tags']);
+		}
+		if(channelInfo['myPage']){
+			printDoughnutChart();
+		}
+		
+		$(".clipboardBtn").on('click', function(e){
+			let text = $(this).attr("data-clipboard-text");
+			$("#clipboard_target").val(text);
+			$("#clipboard_target").select();
+			try{
+				let successful = document.execCommand('copy');
+				alert(/*[[#{res.copy}]]*/);
+				$("#layer_recommendKey").css("display","none")
+			} catch(err){
+				alert(/*[[#{res.not_supplied_browser}]]*/);
+			}
+		})
+	})
+	
+	
+	function printDoughnutChart(){
+		var array = JSON.parse(actInfo['categStatJson']);
+		if(array.length > 0){
+			array = sortAndAddName(array);
+			
+			printChart(array);
+			printIndex(array);
+			
+			
+			$("#div_act_categ_chart").css("display","");
+			$("#div_act_categ_index").css("display","");
+		} else {
+			$("#div_act_categ_chart").css("display","none");
+			$("#div_act_categ_index").css("display","none");
+		}
+	}
+	
+	function sortAndAddName(array){
+		array.sort(function(a,b){
+			if(b.act_point>a.act_point){
+				return 1;
+			}
+			if (b.act_point < a.act_point) {
+			    return -1;
+			 }
+		 	return 0;
+		})
+		
+		for(var i in array){
+			array[i]['categ_name']=categMap[array[i]['categ_id']];
+		}
+		log(array);
+		return array.slice(0, 3);
+	}
+	
+	
+	function printChart(list){
+		
+		window.jQuery.ChartJs.init(list);
+	}
+	
+	function printIndex(list){
+		for(var i=0; i<list.length; i++){
+			var categId = String(list[i].categ_id)+"01";
+			var appendSpan = '<span class="fi_blank"><em class="fi_obj fj_obj'+(i+1)+'"></em></span>'+
+							 '<span class="txt"><a href="javascript:moveCateg('+"'"+categId+"'"+')">'+list[i].categ_name+'</a></span>'
+							 
+			$("#div_act_categ_index").append(appendSpan);
+		}
+	}
+	
+	function printTags(tagString){
+		let tagArr = JSON.parse(tagString);
+		let jsonToString = "";
+		for(let index in tagArr){
+			jsonToString += '#'+tagArr[index]+' ';
+		}
+		$("#ch_tags").text(jsonToString);
+	}
+	
+	function subscribe(chId){
+		log(chId);
+		
+		let reqUrl = prefix + "/api/channel/subscribe.do?channel_id="+chId;
+		log(reqUrl);
+		
+		$.ajax({
+	        url: reqUrl,
+	        type:'get',
+	        contentType:"application/json",
+	        success:function(data){
+	        	log(data);
+	        	if(data['state'] == STATE_SUCCESS){
+	        		if(data['data']['subscribed']){
+	        			alert(/*[[#{res.subscribe}]]*/)
+	        		} else {
+	        			alert(/*[[#{res.unsubscribe}]]*/)
+	        		}
+	        		printSubscribeBtn(data['data']);
+	        	} else	{
+	        		alertErrorMessage(data['error_message']);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+		
+	}
+	
+	function printSubscribeBtn(data){
+		let subscriberNum = data['channel']['subscriber']
+		
+		if(data['subscribed'] == true){
+			$("#subscribing").addClass("off");
+			$("#subscribing").text(/*[[#{channel.btn.unsubscribe}]]*/)
+		} else {
+			$("#subscribing").removeClass("off");
+			$("#subscribing").text(/*[[#{channel.btn.subscribe}]]*/)
+		}
+		$("#subscriberNum").text(subscriberNum)
+		
+		
+	}
+	function showRecommendKey(){
+		$("#layer_recommendKey").css("display","")
+	}
+</script>
+
+<body>    
+	<!-- S:Layer -->
+    <div id="layer_recommendKey" class="wrap_layer" style="display: none;">
+
+        <!-- 해당 Div만 각 레이어에 사용하면 된다. -->
+        <div class="wrap_box">
+            <div class="layer_close"><span class="layer_off"></span></div>
+            <div class="layer_box">
+                <p class="ch_tit" style="text-align:left;" ><strong th:text="${channelInfo.owner.nickName}">haemire</strong> <th:block th:text="#{member.of_key}">님의 회원 Key</th:block></p>
+                <p id="disp_myRecommKey" class="ch_desc" style="text-align:left;" th:text="${channelInfo.owner.recommCode}"></p>
+               	<textarea id="clipboard_target" style="position:absolute;top:-9999em"></textarea>
+            </div>
+            <div class="btn">
+                <a href='javascript:$("#layer_recommendKey").css("display","none")' class="btn_type_bg btn_type_gray_none_fill" th:text="#{btn.close}">취소</a>
+                <a href="javascript:void(0);" th:data-clipboard-text="${channelInfo.owner.recommCode}"  class="clipboardBtn btn_type_bg btn_type_orange_fill" th:text="#{btn.copy}">복사</a>
+            </div>
+        </div>
+        
+        <div class="wrap_dimmed"></div>
+    </div>
+    <div id="page" class="wrap_total">
+		<th:block th:if="${channelInfo.myPage == true}">
+			<div class="head_wrap">
+	            <a th:href="@{/m/home.do}" class="btn_back"></a>
+	            <div class="title_wrap">
+	                <h1 class="title_detail">My Page</h1>
+	                <a th:href="@{/m/member_mgmt/member_modify.do}" class="info_modify" th:text="#{member.modify.info}">정보 수정</a>
+	            </div>
+	        </div>
+		</th:block>
+		<th:block th:if="${channelInfo.myPage == false}">
+			<div class="head_wrap">
+	            <a href="javascript:history.back()" class="btn_back"></a>
+	            <div class="title_wrap">
+	                <h1 class="title_detail">Channel</h1>
+	            </div>
+	        </div>
+		</th:block>
+        
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <div class="bg_gray">
+
+                    <div class="wrap_content_padding" style="margin-bottom:0;">
+                        
+                        <div class="wrap_myinfo">
+                            <th:block th:if="${channelInfo.privateInfo.profileImagePath != null}">
+				        		<p class="profile"><img th:src="|${imgPrefix}/${channelInfo.privateInfo.profileImagePath}_300.png?refreshCode=${refreshCode}|"></p>
+				        	</th:block>
+				        	<th:block th:if="${channelInfo.privateInfo.profileImagePath == null}">
+				        		<p class="profile"><img th:src="@{/image/img_general_profile_default.png}" class="profile"></p>
+				        	</th:block>
+                            <span class="level" th:text="'Level.' + ${channelInfo.owner.level}">Level.5</span>
+                            <span class="nickname"><i th:text="${channelInfo.owner.nickName}">haemire</i><a href="javascript:showRecommendKey()" th:if="${channelInfo.myPage == true}"><em></em></a></span>
+                            <span class="mem_type" th:switch=${channelInfo.owner.loginType}>
+                                <i th:case="0"class="m_revunara">REVUNARA</i>
+                                <i th:case="1" class="m_naver">NAVER</i>
+                                <i th:case="2" class="m_kakao">KAKAO</i>
+                                <i th:case="3" class="m_google">GOOGLE</i>
+                                <i th:case="4" class="m_facebook">FACEBOOK</i>
+                                <i th:case="*" class="m_revunara">REVUNARA</i>
+                                <em th:text="|#{member.reg_date} : ${#calendars.format(channelInfo.owner.regDate,'YYYY. MM. dd')}|">가입일 : 2020.10.10</em>
+                            </span>
+                            <th:block th:if="${channelInfo.myPage == true}">
+                            	<span class="subscribe" th:utext="|<strong>#{count.subscribe}</strong>${channelInfo.channel.subsCnt}<em>|+'|'+|</em><strong>#{count.subscriber}</strong>${channelInfo.channel.subscriber}|"></span>
+                            </th:block>
+                            <th:block th:if="${channelInfo.myPage == false}">
+                            	<span class="subscribe"><strong th:text="#{count.subscriber}">구독자</strong><a th:text="${channelInfo.channel.subscriber}" id="subscriberNum"></a></span>
+                            </th:block>
+                            <th:block th:if="${channelInfo.myPage == true}">
+                            	<ul class="reward_now">
+	                                <li>
+	                                    <a th:href="@{/m/member_info/reward_hist.do}">
+	                                        <span class="tit">REVU</span>
+	                                        <p class="num" th:text="${actInfo.totalRevu}">0</p>
+	                                    </a>
+	                                </li>
+	                                <li>
+	                                    <a th:href="@{/m/member_info/reward_hist.do}">
+	                                        <span class="tit">RENA</span>
+	                                        <p class="num" th:text="${actInfo.totalRena}">0</p>
+	                                    </a>
+	                                </li>
+	                            </ul>
+                            </th:block>
+					 		
+                            <dl class="ch_info" style="margin-top:15px;">
+                                <dt>
+                                    <strong th:text="${channelInfo.owner.nickName}">haemire</strong><th:block th:text="#{member.of_channel}">님의 채널</th:block>
+                                     <th:block th:if="${channelInfo.myPage == true}">
+                                     	<a th:href="@{/m/channel/channel_modify.do}" th:utext="|#{member.modify.channel}<em></em>|">채널정보수정<em></em></a>
+                                     </th:block>
+                                </dt>
+                                <dd class="desc">
+                                    <p class="title" th:text="${channelInfo.channel.chName}">채널 타이틀 자리입니다.</p>
+                                    <th:block th:if="${channelInfo.channel.chStatus == 1 || channelInfo.myPage == true}">
+                                    	<div th:text="${channelInfo.channel.chDesc != null} ? ${channelInfo.channel.chDesc} : #{channel.basic.intro}">
+                                    		여기에 채널 기본 소개글이 들어갑니다.여기에 채널 기본 소개글이 들어갑니다.여기에 채널 기본 소개글이 들어갑니다.
+                                    	</div>
+                                    	<th:block th:if="${channelInfo.channel.tags != null}">
+                                    		<div class="tag"><span id="ch_tags"></span></div>
+                                    	</th:block>
+                                    </th:block>
+                                    <th:block th:if="${channelInfo.channel.chStatus == 0 && channelInfo.myPage == false}">
+                                    	<div th:text="#{channel.closed}">
+                                    		비공개 채널입니다.
+                                    	</div>
+                                    </th:block>
+                                </dd>
+                            </dl>
+                            <th:block th:if="${channelInfo.channel.chStatus == 1}">
+	                            <th:block th:if="${channelInfo.myPage == false}">
+		                            <th:block th:if="${channelInfo.subscribed == true}">
+		                            	<a id="subscribing" th:href="|javascript:subscribe(${channelInfo.channel.channelId})|" class="subscribe off" th:text="#{channel.btn.unsubscribe}">구독 해지하기</a>
+		                            </th:block>
+		                            <th:block th:if="${channelInfo.subscribed != true}">
+		                             	<a id="subscribing" th:href="|javascript:subscribe(${channelInfo.channel.channelId})|" class="subscribe" th:text="#{channel.btn.subscribe}">채널 구독하기</a>	
+		                            </th:block>
+	                           	</th:block>
+                          <!--   구독된 채널을 해제하려면 off 클래스를 추가한다. -->
+							</th:block>
+                        </div> 
+
+                    </div>
+
+                </div>
+				<th:block th:if="${channelInfo.recentReview != null && channelInfo.channel.chStatus == 1}">
+	                <div class="wrap_content_padding" style="margin:0 0 -10px 15px;">
+	
+	                    <div class="ser_key_cont">
+	                        <span class="latest"><em class="title_deco"></em><th:block th:text="#{channel.recent_content}">최신 등록</th:block></span>
+	                        <a th:href="|channel_recent_reviews.do?chId=${channelInfo.channel.channelId}|" class="more_btn" th:utext="|#{btn.more}<em></em>|">더보기<em></em></a>
+	                    </div>
+	                </div>
+	
+	                <style>
+	                .slick-prev:before,.slick-next:before {color:#aaa;font-weight:700;font-size:3rem;}
+	                </style>
+	                
+	                <div>
+                        <ul class="list_type_flat">  
+                        	<th:block th:each="item: ${channelInfo.recentReview}">
+                           		<th:block th:replace="/common/item_content.html"></th:block>
+                            </th:block>
+                        </ul>
+                    </div>
+				</th:block>
+				<th:block th:if="${channelInfo.popularReview != null && channelInfo.channel.chStatus == 1}">
+	                <div class="wrap_content_padding" style="margin:0 0 -10px 15px;">
+	
+	                    <div class="ser_key_cont">
+	                        <span class="latest"><em class="title_deco"></em><th:block th:text="#{channel.hot_review}">인기 리뷰</th:block></span>
+	                        <a th:href="|channel_pop_reviews.do?chId=${channelInfo.channel.channelId}|" class="more_btn" th:utext="|#{btn.more}<em></em>|">더보기<em></em></a>
+	                    </div>
+	
+	                </div>
+	
+	                <div>
+                        <ul class="list_type_flat">  
+                        	<th:block th:each="item: ${channelInfo.popularReview}">
+                            		<th:block th:replace="/common/item_content.html"></th:block>
+                            </th:block>
+                        </ul>
+                    </div>  
+	            </th:block>
+	            <th:block th:if="${channelInfo.mySubsReview != null}">
+	                <div class="wrap_content_padding" style="margin:0 0 -10px 15px;">
+	
+	                    <div class="ser_key_cont">
+	                        <span class="latest"><em class="title_deco"></em><th:block th:text="#{channel.subs_ch}">구독 채널</th:block></span>
+	                        <a href="subs_channel_reviews.do" class="more_btn" th:utext="|#{btn.more}<em></em>|">더보기<em></em></a>
+	                    </div>
+	
+	                </div>
+	
+	                
+                    <div>
+                        <ul class="list_type_flat">  
+                           	<th:block th:each="item: ${channelInfo.mySubsReview}">
+                               	<th:block th:replace="/common/item_content.html"></th:block>
+                               </th:block>
+                           </ul>
+                    </div>                   
+	          
+	            </th:block>
+	           	<th:block th:if="${channelInfo.myPage == true}">
+	            	<div class="wrap_content_padding" style="margin:0 0 -10px 15px;">
+	
+	                    <div class="ser_key_cont">
+	                        <span class="latest"><em class="title_deco"></em><th:block th:text="#{member.act_hist}">활동 이력</th:block></span>
+
+	                    </div>
+	
+	                </div>
+	
+	                
+                    <div>
+                        <ul class="mem_history" style="margin:25px 0 -10px 15px;">
+	                        <li><a th:href="@{/m/member_info/read_hist.do}" th:utext="|#{member.read_hist}<em></em>|">읽은 내역<em></em></a></li>
+	                        <li><a th:href="@{/m/member_info/report_hist.do}" th:utext="|#{member.report_hist}<em></em>|">신고 내역<em></em></a></li>
+	                        <li><a th:href="@{/m/member_info/reward_hist.do}" th:utext="|#{member.reward_hist}<em></em>|">보상 내역<em></em></a></li>
+	                        <li><a th:href="@{/m/member_info/evalue_hist.do}" th:utext="|#{member.evalue_hist}<em></em>|">평가 내역<em></em></a></li>
+	                        <li><a th:href="@{/m/member_info/pick_hist.do}" th:utext="|#{member.pick_hist}<em></em>|">찜 내역<em></em></a></li>
+	                        <li><a th:href="@{/m/member_info/review_hist.do}" th:utext="|#{member.review_hist}<em></em>|">리뷰 내역<em></em></a></li>
+	                        <li><a th:href="@{/m/member_info/subscribe_hist.do}" th:utext="|#{member.subs_hist}<em></em>|">구독 내역<em></em></a></li>
+	                        <li><a th:href="@{/m/member_info/share_hist.do}" th:utext="|#{member.share_hist}<em></em>|">공유 내역<em></em></a></li>
+	                    </ul>
+	                    
+	                <div class="" style="height: 250px;margin-top:10px;display:none;" id="div_act_categ_chart">
+	                    <canvas id="doughnut-chart"></canvas>
+	                </div> 
+	                
+	                <div class="tom_donut_index" id="div_act_categ_index" style="display:none;"></div>
+                    </div> 
+	                   
+	                
+	            </th:block>
+
+            </div>
+            
+        </div>
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+    <!-- third party js -->
+    <script th:src="@{/js/Chart.bundle.min.js}"></script>
+    <!-- third party js ends -->
+	<script th:src="@{/js/tom.chartjs_act_categ_stat.js}"></script>
+
+
+</body>
+
+</html>

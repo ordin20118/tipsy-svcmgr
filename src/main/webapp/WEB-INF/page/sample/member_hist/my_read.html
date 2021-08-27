@@ -1,0 +1,328 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<script th:inline="javascript">
+	
+	
+	let filterType = null;
+	let sortType = SORT_TYPE_DESC;
+	let moreJobResult = true;
+	let currentPage = 1;
+	let dataCnt = /*[[${histSize}]]*/;
+	
+	$(document).ready(function(){
+		
+		jQuery(window).scroll(function() {
+			if (jQuery(window).scrollTop() >= jQuery(document).height() - jQuery(window).height()) {
+				if(moreJobResult && dataCnt < 100) {
+					getReadHist(currentPage+1, 20);
+		    	}
+			}
+		});	
+		
+	})
+	
+	function getReadHist(nowPage, perPage){
+		let urlParam = 'paging.nowPage=' +nowPage +
+  		'&paging.perPage=' + perPage +
+  		'&orderby.field=view_date' +
+  		'&orderby.sorting='+sortType;
+  		if(filterType != null){
+  			urlParam += '&contentType='+filterType;
+  		}
+  		
+		let reqUrl = prefix +'/api/member_info/get_read_hist.do?'+urlParam;
+		
+		$.ajax({
+	        url: reqUrl,
+	        type:'get',
+	        success:function(data){
+	        	log(data);
+	        	if(data['state'] == STATE_SUCCESS){
+	        		currentPage = nowPage;
+	        		printReadHistory(data['list']);
+	        	} else{
+	        		alertErrorMessage(data['error_message']);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	function printReadHistory(list){
+		let appendLi = makeAppendLi(list);
+		
+		$("#ul_read_history").append(appendLi);
+		
+		dataCnt += list.length;
+		if(list.length < 20){
+			moreJobResult = false;
+		}
+		
+		
+	}
+	
+	function makeAppendLi(list){
+		let appendLi = "";
+		log(list.length);
+		log(list);
+		if(list.length > 0){
+			for(let i=0; i<list.length; i++){
+				if(list[i]['content_info']['content_info_type'] == TYPE_PROD){
+					appendLi += makeHistProdLi(list[i]);
+				} else if (list[i]['content_info']['content_info_type'] == TYPE_REVIEW){
+					appendLi += makeHistReviewLi(list[i]);
+				} else if (list[i]['content_info']['content_info_type'] == TYPE_REVIEW_EXT){
+					appendLi += makeHistExtReviewLi(list[i]);
+				} 
+			}
+		}
+		return appendLi;
+	}
+	
+	function makeHistProdLi(data){
+		let prodInfo = data['content_info'];
+		let readInfo = data['read_info'];
+		
+		let stringProd = /*[[#{filter.content.prod}]]*/;
+		let evalue = /*[[#{common.evalue}]]*/;
+		let selectNum = /*[[#{common.count.select}]]*/;
+		let pick = /*[[#{common.pick}]]*/;
+		
+		let viewDate = "-";
+		if(readInfo['view_date'] != null){
+			viewDate = moment(readInfo['view_date']).format('YYYY.MM.DD HH:mm');
+		}
+		
+		let appendLi =	'<li>'+
+						'    <div class="tl_type1">'+
+						'        <div class="s_plusminus s_plus">&middot;</div>'+
+						'        <div class="cont">'+
+						'            <p class="time">'+viewDate+'</p>'+
+						'            <p class="title"><a href="javascript:moveProd('+prodInfo['prod']['prod_id']+')"><span class="type1">'+stringProd+'</span>'+prodInfo['prod']['prod_name']+'</a></p>'+
+						'            <p class="data">'+
+						'                <span><strong>'+evalue+'</strong><em class="star"></em>'+prodInfo['avg_rate'].toFixed(1)+'<em>|</em></span>'+
+						'                <span><strong>'+selectNum+'</strong>'+prodInfo['prod']['view_count']+'<em>|</em></span>'+
+						'                <span><strong>'+pick+'</strong>'+prodInfo['pick_count']+'</span>'+
+						'            </p>'+
+						'        </div>'+
+						'    </div>'+
+						'</li>';
+        
+		return appendLi;
+	}
+	
+	function makeHistReviewLi(data){
+		let reviewInfo = data['content_info'];
+		let readInfo = data['read_info'];
+		
+		let viewDate = "-";
+		if(readInfo['view_date'] != null){
+			viewDate = moment(readInfo['view_date']).format('YYYY.MM.DD HH:mm');
+		}
+		
+		let stringReview = /*[[#{filter.content.review}]]*/;
+		let sympathy = /*[[#{review.sympathy}]]*/;
+		let select = /*[[#{common.count.select}]]*/;
+		let pick = /*[[#{common.pick}]]*/;
+		
+		let appendLi =	'<li><div class="tl_type1">'+
+                        '    <div class="s_plusminus s_plus">&middot;</div>'+
+                        '    <div class="cont">'+
+                        '        <p class="time">'+viewDate+'</p>'+
+                        '        <p class="title"><a href="javascript:moveReview('+reviewInfo['review']['review_id']+')"><span class="type2">'+stringReview+'</span>'+reviewInfo['review']['title']+'</a></p>'+
+                        '        <p class="data">'+
+                        '            <span><strong>'+sympathy+'</strong><em class="agr"></em>'+reviewInfo['like_stat']['like_count']+'<em>|</em></span>'+
+                        '            <span><strong>'+select+'</strong>'+reviewInfo['review']['view_count']+'<em>|</em></span>'+
+                        '            <span><strong>'+pick+'</strong>'+reviewInfo['pick_count']+'</span>'+
+                        '        </p>'+
+                        '    </div>'+
+                        '</div></li>';
+                        
+         return appendLi;
+	}                 
+	
+	function makeHistExtReviewLi(data){
+		let extReviewInfo = data['content_info'];
+		let readInfo = data['read_info'];
+		
+		let viewDate = "-";
+		if(readInfo['view_date'] != null){
+			viewDate = moment(readInfo['view_date']).format('YYYY.MM.DD HH:mm');
+		}
+		log(data['content_info']);
+		let mallMark = getMallMark(extReviewInfo['mall_name']);
+		
+		let stringReview = /*[[#{filter.content.review}]]*/;
+		let select = /*[[#{common.count.select}]]*/;
+		
+		let appendLi =	'<li>'+
+						'    <div class="tl_type1">'+
+						'        <div class="s_plusminus s_plus">&middot;</div>'+
+						'        <div class="cont">'+
+						'            <p class="time">'+viewDate+'</p>'+
+						'            <p class="title"><a href="javascript:moveExtReview('+extReviewInfo['rel_id']+')"><span class="type2">'+stringReview+'</span>'+extReviewInfo['title']+'</a></p>'+
+						'            <p class="data">'+
+						'                <span class="where"><em class="'+mallMark+'</em><i></i><em>|</em></span>'+
+						'                <span><strong>'+select+'</strong>'+extReviewInfo['view_count']+'</span>'+
+						'            </p>'+
+						'        </div>'+
+						'    </div>'+
+						'</li>';
+                        
+         return appendLi;
+	}
+	
+	
+	
+	function changeFilterType(){
+		log($("#sel_filter_type").val());
+		if($("#sel_filter_type").val() == 0){
+			filterType = null;
+		} else {
+			filterType = $("#sel_filter_type").val();
+		}
+		contentClear()
+		getReadHist(1, 20);
+	}
+	function changeSortType(){
+		log($("#sel_sort_type").val());
+		sortType = $("#sel_sort_type").val();
+		contentClear()
+		getReadHist(1, 20);
+	}
+	
+	function contentClear(){
+		$("#ul_read_history").empty()
+	}
+	
+</script>
+<body>    
+
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a th:href="@{/m/channel/channel.do}" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail" th:text="#{member.read_hist}">읽은 내역</h1>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <div class="bg_gray">
+
+                    <div class="wrap_content_padding" style="margin-bottom:0;">
+                        
+                        <div class="wrap_myinfo">
+
+                            <ul class="mydata_now">
+                                <li>
+                                    <a>
+                                        <span class="tit" th:text="#{filter.content.prod}">제품</span>
+                                        <p class="num" th:text="${prodCnt}">250</p>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a>
+                                        <span class="tit" th:text="#{filter.content.review}">리뷰</span>
+                                        <p class="num" th:text="${reviewCnt}">250</p>
+                                    </a>
+                                </li>
+                            </ul>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="wrap_content_padding" style="margin-top:10px;">
+
+                    <!-- S:View Filter -->
+                    <div class="wrap_viewfilter">
+
+                        <div class="viewfilter_filter">
+                            <select id="sel_filter_type" class="input_type_none" onchange="changeFilterType()">
+                                <option value = 0	th:text="#{filter.option.all_view}">전체보기</option>
+                                <option value = 100	th:text="#{filter.option.prod_view}">제품보기</option>
+                                <option value = 210	th:text="#{filter.option.review_view}">리뷰보기</option>
+                                <option value = 222	th:text="#{filter.option.blog_view}">블로그보기</option>
+                                <option value = 221	th:text="#{filter.option.video_view}">동영상보기</option>
+                            </select>
+                        </div>                          
+
+                        <div class="viewfilter_sort">
+                            <select id="sel_sort_type" class="input_type_none" onchange="changeSortType()" >
+                                <option value = "desc" th:text="#{common.orderby_lately}">최신순</option>
+                                <option value = "asc" th:text="#{common.orderby_firstly}">처음순</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <ul id="ul_read_history" class="timeline_wrap" th:if="${histSize > 0}">
+                    <th:block th:each="readHist : ${readHist}" th:with="TYPE_PROD=100, TYPE_REVIEW=210, TYPE_EXT_REVIEW=220, TYPE_COMPARE=300">
+                        <li th:if="${readHist.contentInfo.contentInfoType == TYPE_PROD}">
+                            <div class="tl_type1">
+                                <div class="s_plusminus s_plus">&middot;</div>
+                                <div class="cont">
+                                    <p class="time" th:text="${#calendars.format(readHist.readInfo.viewDate,'YYYY.MM.dd HH:mm')}">2020.10.10 14:34</p>
+                                    <p class="title"><a th:href="|javascript:moveProd(${readHist.contentInfo.prod.prodId})|"><span class="type1" th:text="#{filter.content.prod}">제품</span><th:block th:text="${readHist.contentInfo.prod.prodName}">타이틀 자리</th:block></a></p>
+                                    <p class="data">
+                                        <span><strong th:text="#{common.evalue}">평가</strong><em class="star"></em><th:block th:text="${#numbers.formatDecimal(readHist.contentInfo.avgRate - readHist.contentInfo.avgRate % 0.1,1,1)}">0</th:block><em>|</em></span>
+                                        <span><strong th:text="#{common.count.select}">조회수</strong><th:block th:text="${readHist.contentInfo.prod.viewCount}">0</th:block><em>|</em></span>
+                                        <span><strong th:text="#{common.pick}">찜</strong><th:block th:text="${readHist.contentInfo.pickCount}">0</th:block></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </li>
+                        <li th:if="${readHist.contentInfo.contentInfoType == TYPE_REVIEW}">
+                            <div class="tl_type1">
+                                <div class="s_plusminus s_plus">&middot;</div>
+                                <div class="cont">
+                                    <p class="time" th:text="${#calendars.format(readHist.readInfo.viewDate,'YYYY.MM.dd HH:mm')}">2020.10.10 14:34</p>
+                                    <p class="title"><a th:href="|javascript:moveReview(${readHist.contentInfo.review.reviewId})|"><span class="type2" th:text="#{filter.content.review}">리뷰</span><th:block th:text="${readHist.contentInfo.review.title}">타이틀 자리</th:block></a></p>
+                                    <p class="data">
+                                        <span><strong th:text="#{review.sympathy}">공감</strong><em class="agr"></em><th:block th:text="${readHist.contentInfo.likeStat.likeCount}">0</th:block><em>|</em></span>
+                                        <span><strong th:text="#{common.count.select}">조회수</strong><th:block th:text="${readHist.contentInfo.review.viewCount}">0</th:block><em>|</em></span>
+                                        <span><strong th:text="#{common.pick}">찜</strong><th:block th:text="${readHist.contentInfo.pickCount}">0</th:block></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </li>
+                        <li th:if="${readHist.contentInfo.contentInfoType == TYPE_EXT_REVIEW}">
+                            <div class="tl_type1">
+                                <div class="s_plusminus s_plus">&middot;</div>
+                                <div class="cont">
+                                    <p class="time" th:text="${#calendars.format(readHist.readInfo.viewDate,'YYYY.MM.dd HH:mm')}">2020.10.10 14:34</p>
+                                    <p class="title"><a th:href="|javascript:moveExtReview(${readHist.contentInfo.relId})|"><span class="type2" th:text="#{filter.content.review}">리뷰</span><th:block th:text="${readHist.contentInfo.title}">타이틀 자리</th:block></a></p>
+                                    <p class="data">
+                                        <span class="where" th:if="${readHist.contentInfo.mallName} == '유투브'"><em class="wh youtube">Youtube</em><i></i><em>|</em></span>
+                                        <span class="where" th:if="${readHist.contentInfo.mallName} == '네이버'"><em class="wh naver">NAVER</em><i></i><em>|</em></span>
+                                        <span class="where" th:if="${readHist.contentInfo.mallName} == '다음'"><em class="wh daum">DAUM</em><i></i><em>|</em></span>
+                                        <span class="where" th:if="${readHist.contentInfo.mallName} != '유투브' and ${readHist.contentInfo.mallName} != '네이버' and ${readHist.contentInfo.mallName} != '다음'"><em class="wh etc">ETC</em><i></i><em>|</em></span>
+						'               <span><strong th:text="#{common.count.select}">조회수</strong><th:block th:text="${readHist.contentInfo.viewCount}">0</th:block></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </li>
+                    </th:block>
+                    </ul>  
+                    
+
+                </div>
+
+            </div>
+            
+        </div>
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

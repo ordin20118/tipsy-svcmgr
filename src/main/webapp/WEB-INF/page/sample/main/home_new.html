@@ -1,0 +1,941 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<script type="text/javascript" th:inline="javascript">
+
+	$(document).ready(function() {
+	}); 
+
+	function moveSearchPage(){
+		location.href = prefix + "/m/search/search.do";
+	}
+	
+	function search(keyword) {		
+		if(keyword == '') {
+			alert('검색어를 입력하세요.');
+			return;
+		}
+		//log("keyword ["+keyword+"]");
+		location.href='search/search.do?keyword=' + encodeURI(keyword);
+	}
+	
+	
+	function showSearchPopup(showPopup) {
+		log("showSearchPopup --- " + showPopup);
+		if(showPopup) {
+			$("#div_search_popup").css("display",  "block");
+			$("#div_search_result").css("display", "none");
+			$("#keyword").focus()
+		} else {
+			$("#div_search_popup").css("display",  "none");
+			$("#div_search_result").css("display", "block");
+		}
+	}
+	
+	
+	function pressKeyword() {
+        if (window.event.keyCode == 13) {
+ 			location.href= prefix + "/m/search/search.do?keyword=" + $("#keyword").val();
+ 			
+	    } else {
+	    	let mKeyword = $("#keyword").val();
+	    	if(mKeyword.length != 0) {
+	    		loadActcomplateKeyword(mKeyword);	
+	    		showAutoComplatePanel(true);
+	    	} else {
+	    		showAutoComplatePanel(false);
+	    	}
+	    }
+	}
+	
+	function loadActcomplateKeyword(mKeyword) {
+		let url = prefix + '/api/search/suggest_autocomplate_keyword.do?keyword=' + encodeURIComponent(mKeyword);
+		$.ajax({
+	        url: url,
+	        type:'get',
+	        success:function(data){
+	        	log(data);
+	        	if(data['state'] == 0) {
+	        		printAutoComplateKeyword(mKeyword, data['list']);
+	    		} else{
+	    			//alert(getErrorMsg(data['state']));
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	
+	
+	
+	function printAutoComplateKeyword(mKeyword, list) {
+		$("#ul_word_suggest").empty();
+		let alreadyPrintedMap = {};
+		
+				
+		for(let i=0; i<list.length; i++) {
+			let sData = list[i];
+			let text = sData['disp_text'];
+				
+			if(sData['text_type'] == 2) {
+				//카테고리.
+				let appendLi = ''+
+				'<li id="ac_cate_'+i+'">' +
+	            '	<a class="ser_key"><em class="ct">Category</em><span class="ser_indent">'+text+'</span></a>' +
+	            '</li>';
+				$("#ul_word_suggest").append(appendLi);
+				
+				$("#ac_cate_"+i).bind("click", function(){
+					let parma = {'categId' : sData['extra_info']};
+					location.href = contextPath + '/m/cate_list.do#' + encodeURI(JSON.stringify(parma));
+				});
+				
+			} else if(sData['text_type'] == 4) {
+				//제품
+				let appendLi = ''+
+				'<li id="ac_prod_'+i+'">' +
+	            '	<a class="ser_key"><em class="ct">제품</em><span class="ser_indent">'+text+'</span></a>' +
+	            '</li>';
+				$("#ul_word_suggest").append(appendLi);
+				
+				$("#ac_prod_"+i).bind("click", function(){
+					location.href = contextPath + '/m/prod/product.do?prod_id=' + sData['extra_info'];
+				});
+				
+				
+			} else {
+				if(alreadyPrintedMap[text] != null) {
+					continue;
+				}
+				
+				let rsDate = sData['recent_search_date'];
+				let rsDateStr = '';
+				if(rsDate != null) {
+					rsDateStr = moment(rsDate).format('YYYY.MM.DD');
+				}
+				
+				//일반...
+				let matchedWord = text.replace(mKeyword, '<span class="match">'+mKeyword+'</span>');
+				let appendLi = ''+
+				'<li id="ac_'+i+'">' +
+	            '	<a href="'+prefix+'/m/search/search.do?keyword='+text+'" class="ser_key"><i></i>'+matchedWord+'</a> ' +
+	            '   <a class="ser_date">'+rsDateStr+'</a> '+
+	            '</li>';
+	            
+				$("#ul_word_suggest").append(appendLi);    				
+				
+			}
+		}
+	}
+	
+	function showAutoComplatePanel(show) {
+		if(show) {
+			$("#ul_word_suggest").css("display", "block");
+			
+			$("#div_recent_search_words").css("display", "none");
+			$("#div_pop_search_words").css("display", "none");
+		} else {
+			$("#ul_word_suggest").css("display", "none");
+			
+			$("#div_recent_search_words").css("display", "block");
+			$("#div_pop_search_words").css("display", "block");
+		}
+	}
+	
+	function resetSearchKeyword(){
+		$("#keyword").val('');
+		showAutoComplatePanel(false);
+	}
+	
+
+</script>
+
+<body>
+
+    <div id="page" class="wrap_total">
+        <div class="header">
+            <a href="#menu"><span></span></a>
+        </div>
+        <div class="content">
+
+            <div class="wrap_main_ser">
+                <h1>세상의 모든 리뷰</h1>
+                <img src="../image/bi_main.png" class="bi_main" alt="REVUNARA">
+                <div class="main_search_wrap">
+                    <input type="" class="search_input input_type_none">
+                    <a href="" class="btn_search"></a>
+                </div>
+                <div class="wrap_main_key">
+                    <a href="">Keyword</a>
+                    <a href="">Keyword</a>
+                    <a href="">Keyword</a>
+                </div>
+            </div>
+            
+            <div>
+                <p class="foryou_ment">당신을 위한 추천 콘텐츠</p>
+                <img src="../image/img_foryou.png" class="foryou" alt="foryou">
+
+                <div class="list_wrap">
+
+                    <div class="list_wrap_line">
+    
+                    <div class="group_title">
+                        <p class="title">구독 채널</p>
+                        <a href="" class="more">더보기<em></em></a>
+                    </div>
+    
+                     <!-- S:List Flat -->
+                     <ul class="list_type_flat">
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">에어팟 프로 연결(페어링) 및 사용 후기</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_review.jpeg" class="img_type_review">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        애플 공식 홈페이지에서 329,000원에 구입한 에어팟 프로. 애플 제품만 찾는 사람들에게는 혁신적일 수밖에 없었던 건. 기존 에어팟 1, 2에서는
+                                    </div>
+                                </div>                                
+                                <div class="where wh100"><em class="wh rv"></em><p class="data">haemire<span>|</span>2020.10.10</p></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><strong>도움</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                                <div class="rel_product"><em>P</em><a href="" class="ellipsis_1">애플 에어팟 프로 MWP22KH/A애플 에어팟 프로 MWP22KH/A</a><span class="eval"><i></i>4.5</span></div>
+                            </div>                            
+                        </li>
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">에어팟 프로 연결(페어링) 및 사용 후기</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_review.jpeg" class="img_type_review">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        애플 공식 홈페이지에서 329,000원에 구입한 에어팟 프로. 애플 제품만 찾는 사람들에게는 혁신적일 수밖에 없었던 건. 기존 에어팟 1, 2에서는
+                                    </div>
+                                </div>                                
+                                <div class="where wh100"><em class="wh rv"></em><p class="data">haemire<span>|</span>2020.10.10</p></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><strong>도움</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                                <div class="rel_product"><em>P</em><a href="" class="ellipsis_1">애플 에어팟 프로 MWP22KH/A애플 에어팟 프로 MWP22KH/A</a><span class="eval"><i></i>4.5</span></div>
+                            </div>                            
+                        </li>
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">에어팟 프로 연결(페어링) 및 사용 후기</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_review.jpeg" class="img_type_review">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        애플 공식 홈페이지에서 329,000원에 구입한 에어팟 프로. 애플 제품만 찾는 사람들에게는 혁신적일 수밖에 없었던 건. 기존 에어팟 1, 2에서는
+                                    </div>
+                                </div>                                
+                                <div class="where wh100"><em class="wh rv"></em><p class="data">haemire<span>|</span>2020.10.10</p></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><strong>도움</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                                <div class="rel_product"><em>P</em><a href="" class="ellipsis_1">애플 에어팟 프로 MWP22KH/A애플 에어팟 프로 MWP22KH/A</a><span class="eval"><i></i>4.5</span></div>
+                            </div>                            
+                        </li>
+                    </ul>
+    
+                    </div>
+    
+                </div>
+                <!-- //list_wrap -->   
+
+                <div class="list_wrap">
+
+                    <div class="list_wrap_line">
+    
+                    <div class="group_title">
+                        <p class="title">내가 본 후기</p>
+                        <a href="" class="more">더보기<em></em></a>
+                    </div>
+    
+                     <!-- S:List Flat -->
+                     <ul class="list_type_flat">
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">에어팟 프로 연결(페어링) 및 사용 후기</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_review.jpeg" class="img_type_review">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        애플 공식 홈페이지에서 329,000원에 구입한 에어팟 프로. 애플 제품만 찾는 사람들에게는 혁신적일 수밖에 없었던 건. 기존 에어팟 1, 2에서는
+                                    </div>
+                                </div>                                
+                                <div class="where wh100"><em class="wh rv"></em><p class="data">haemire<span>|</span>2020.10.10</p></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><strong>도움</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                                <div class="rel_product"><em>P</em><a href="" class="ellipsis_1">애플 에어팟 프로 MWP22KH/A애플 에어팟 프로 MWP22KH/A</a><span class="eval"><i></i>4.5</span></div>
+                            </div>                            
+                        </li>
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">에어팟 프로 연결(페어링) 및 사용 후기</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_review.jpeg" class="img_type_review">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        애플 공식 홈페이지에서 329,000원에 구입한 에어팟 프로. 애플 제품만 찾는 사람들에게는 혁신적일 수밖에 없었던 건. 기존 에어팟 1, 2에서는
+                                    </div>
+                                </div>
+                                <div class="where wh100"><em class="wh naver"></em><p class="data">haemire<span>|</span>2020.10.10</p><i></i></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                                <div class="rel_product"><em>P</em><a href="" class="ellipsis_1">애플 에어팟 프로 MWP22KH/A애플 에어팟 프로 MWP22KH/A</a><span class="eval"><i></i>4.5</span></div>
+                            </div>                            
+                        </li>
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">에어팟 프로 연결(페어링) 및 사용 후기</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_review.jpeg" class="img_type_review">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        애플 공식 홈페이지에서 329,000원에 구입한 에어팟 프로. 애플 제품만 찾는 사람들에게는 혁신적일 수밖에 없었던 건. 기존 에어팟 1, 2에서는
+                                    </div>
+                                </div>
+                                <div class="where wh100"><em class="wh daum"></em><p class="data">haemire<span>|</span>2020.10.10</p><i></i></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                                <div class="rel_product"><em>P</em><a href="" class="ellipsis_1">애플 에어팟 프로 MWP22KH/A애플 에어팟 프로 MWP22KH/A</a><span class="eval"><i></i>4.5</span></div>
+                            </div>                            
+                        </li>
+                    </ul>
+    
+                    </div>
+    
+                </div>
+                <!-- //list_wrap -->
+
+                <div class="list_wrap">
+
+                    <div class="list_wrap_line">
+    
+                    <div class="group_title">
+                        <p class="title">내가 본 동영상</p>
+                        <a href="" class="more">더보기<em></em></a>
+                    </div>
+    
+                     <!-- S:List Flat -->
+                     <ul class="list_type_flat">                        
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="img_desc desc_youtube">
+                                    <div class="img">
+                                        <img src="../image/img_play.png" class="btn_play" alt="play">
+                                        <img src="../image/sam_review.jpeg" class="img_type_review">
+                                    </div>
+                                    <div class="desc ellipsis_3">
+                                        이보다 더 자세할 순 없다! 노캔이 되는 애플 에어팟 프로 언빡싱 & 이틀 사용기!
+                                    </div>
+                                </div>                                
+                                <div class="where"><em class="wh youtube"></em><p class="data">haemire<span>|</span>2020.10.10</p><i></i></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                                <div class="rel_product"><em>P</em><a href="" class="ellipsis_1">애플 에어팟 프로 MWP22KH/A애플 에어팟 프로 MWP22KH/A</a><span class="eval"><i></i>4.5</span></div>
+                            </div>                            
+                        </li>
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="img_desc desc_youtube">
+                                    <div class="img">
+                                        <img src="../image/img_play.png" class="btn_play" alt="play">
+                                        <img src="../image/sam_review.jpeg" class="img_type_review">
+                                    </div>
+                                    <div class="desc ellipsis_3">
+                                        이보다 더 자세할 순 없다! 노캔이 되는 애플 에어팟 프로 언빡싱 & 이틀 사용기!
+                                    </div>
+                                </div>                                
+                                <div class="where"><em class="wh youtube"></em><p class="data">haemire<span>|</span>2020.10.10</p><i></i></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                                <div class="rel_product"><em>P</em><a href="" class="ellipsis_1">애플 에어팟 프로 MWP22KH/A애플 에어팟 프로 MWP22KH/A</a><span class="eval"><i></i>4.5</span></div>
+                            </div>                            
+                        </li>
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="img_desc desc_youtube">
+                                    <div class="img">
+                                        <img src="../image/img_play.png" class="btn_play" alt="play">
+                                        <img src="../image/sam_review.jpeg" class="img_type_review">
+                                    </div>
+                                    <div class="desc ellipsis_3">
+                                        이보다 더 자세할 순 없다! 노캔이 되는 애플 에어팟 프로 언빡싱 & 이틀 사용기!
+                                    </div>
+                                </div>                                
+                                <div class="where"><em class="wh youtube"></em><p class="data">haemire<span>|</span>2020.10.10</p><i></i></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                                <div class="rel_product"><em>P</em><a href="" class="ellipsis_1">애플 에어팟 프로 MWP22KH/A애플 에어팟 프로 MWP22KH/A</a><span class="eval"><i></i>4.5</span></div>
+                            </div>                            
+                        </li>
+                    </ul>
+    
+                    </div>
+    
+                </div>
+                <!-- //list_wrap -->
+
+                <div class="list_wrap">
+
+                    <div class="list_wrap_line">
+    
+                    <!-- 더보기는 타이틀까지 링크 영역을 지정 -->
+                    <div class="group_title">
+                        <p class="title">내가 본 제품</p>
+                        <a href="" class="more">더보기<em></em></a>
+                    </div>
+    
+                     <!-- S:List Flat -->
+                     <ul class="list_type_flat">
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">애플 아이패드 프로 10.1인치 3세대</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_product.png" class="img_type_product">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        이어폰 / 무선 / 코드리스 / 커널형 / 블루투스 / ver 5.0 / AAC / 액티브노이즈캔슬링 / 주변소음듣기 / H1칩셋 / 음악재생: 4.5시간 / 충전단자: 라이트닝, 무선충전 / 오토페어링 / 재생/멈춤조절 / 터치버튼 / 핸즈프리통화 / 퀵충전 / 스마트센서 / 생활방수 / 무게:5.4g / 적응형EQ / Qi인증
+                                    </div>
+                                </div>
+                                <div class="evalue"><span class="rate_star rate_star_50"></span>5.0<i>(123,456)</i></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><a href=""><strong>리뷰</strong>123</a><span>|</span><a href=""><strong>한마디</strong>123</a><span>|</span><strong>공유</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                            </div>                            
+                        </li>
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">애플 아이패드 프로 10.1인치 3세대</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_product.png" class="img_type_product">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        이어폰 / 무선 / 코드리스 / 커널형 / 블루투스 / ver 5.0 / AAC / 액티브노이즈캔슬링 / 주변소음듣기 / H1칩셋 / 음악재생: 4.5시간 / 충전단자: 라이트닝, 무선충전 / 오토페어링 / 재생/멈춤조절 / 터치버튼 / 핸즈프리통화 / 퀵충전 / 스마트센서 / 생활방수 / 무게:5.4g / 적응형EQ / Qi인증
+                                    </div>
+                                </div>
+                                <div class="evalue"><span class="rate_star rate_star_50"></span>5.0<i>(123,456)</i></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><a href=""><strong>리뷰</strong>123</a><span>|</span><a href=""><strong>한마디</strong>123</a><span>|</span><strong>공유</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                            </div>                            
+                        </li>
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">애플 아이패드 프로 10.1인치 3세대</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_product.png" class="img_type_product">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        이어폰 / 무선 / 코드리스 / 커널형 / 블루투스 / ver 5.0 / AAC / 액티브노이즈캔슬링 / 주변소음듣기 / H1칩셋 / 음악재생: 4.5시간 / 충전단자: 라이트닝, 무선충전 / 오토페어링 / 재생/멈춤조절 / 터치버튼 / 핸즈프리통화 / 퀵충전 / 스마트센서 / 생활방수 / 무게:5.4g / 적응형EQ / Qi인증
+                                    </div>
+                                </div>
+                                <div class="evalue"><span class="rate_star rate_star_50"></span>5.0<i>(123,456)</i></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><a href=""><strong>리뷰</strong>123</a><span>|</span><a href=""><strong>한마디</strong>123</a><span>|</span><strong>공유</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                            </div>                            
+                        </li>
+                    </ul>
+    
+                    </div>
+    
+                </div>
+                <!-- //list_wrap -->
+
+                <div class="list_wrap">
+
+                    <div class="list_wrap_line">
+    
+                    <div class="group_title">
+                        <p class="title">NEW 리뷰</p>
+                        <a href="" class="more">더보기<em></em></a>
+                    </div>
+    
+                     <!-- S:List Flat -->
+                     <ul class="list_type_flat">
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">에어팟 프로 연결(페어링) 및 사용 후기</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_review.jpeg" class="img_type_review">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        애플 공식 홈페이지에서 329,000원에 구입한 에어팟 프로. 애플 제품만 찾는 사람들에게는 혁신적일 수밖에 없었던 건. 기존 에어팟 1, 2에서는
+                                    </div>
+                                </div>                                
+                                <div class="where wh100"><em class="wh rv"></em><p class="data">haemire<span>|</span>2020.10.10</p></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><strong>도움</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                                <div class="rel_product"><em>P</em><a href="" class="ellipsis_1">애플 에어팟 프로 MWP22KH/A애플 에어팟 프로 MWP22KH/A</a><span class="eval"><i></i>4.5</span></div>
+                            </div>                            
+                        </li>
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">에어팟 프로 연결(페어링) 및 사용 후기</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_review.jpeg" class="img_type_review">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        애플 공식 홈페이지에서 329,000원에 구입한 에어팟 프로. 애플 제품만 찾는 사람들에게는 혁신적일 수밖에 없었던 건. 기존 에어팟 1, 2에서는
+                                    </div>
+                                </div>                                
+                                <div class="where wh100"><em class="wh rv"></em><p class="data">haemire<span>|</span>2020.10.10</p></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><strong>도움</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                                <div class="rel_product"><em>P</em><a href="" class="ellipsis_1">애플 에어팟 프로 MWP22KH/A애플 에어팟 프로 MWP22KH/A</a><span class="eval"><i></i>4.5</span></div>
+                            </div>                            
+                        </li>
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">에어팟 프로 연결(페어링) 및 사용 후기</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_review.jpeg" class="img_type_review">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        애플 공식 홈페이지에서 329,000원에 구입한 에어팟 프로. 애플 제품만 찾는 사람들에게는 혁신적일 수밖에 없었던 건. 기존 에어팟 1, 2에서는
+                                    </div>
+                                </div>                                
+                                <div class="where wh100"><em class="wh rv"></em><p class="data">haemire<span>|</span>2020.10.10</p></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><strong>도움</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                                <div class="rel_product"><em>P</em><a href="" class="ellipsis_1">애플 에어팟 프로 MWP22KH/A애플 에어팟 프로 MWP22KH/A</a><span class="eval"><i></i>4.5</span></div>
+                            </div>                            
+                        </li>
+                    </ul>
+    
+                    </div>
+    
+                </div>
+                <!-- //list_wrap --> 
+                
+                <div class="list_wrap">
+
+                    <div class="list_wrap_line">
+    
+                    <div class="group_title">
+                        <p class="title">HOT 동영상</p>
+                        <a href="" class="more">더보기<em></em></a>
+                    </div>
+    
+                     <!-- S:List Flat -->
+                     <ul class="list_type_flat">                        
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="img_desc desc_youtube">
+                                    <div class="img">
+                                        <img src="../image/img_play.png" class="btn_play" alt="play">
+                                        <img src="../image/sam_review.jpeg" class="img_type_review">
+                                    </div>
+                                    <div class="desc ellipsis_3">
+                                        이보다 더 자세할 순 없다! 노캔이 되는 애플 에어팟 프로 언빡싱 & 이틀 사용기!
+                                    </div>
+                                </div>                                
+                                <div class="where"><em class="wh youtube"></em><p class="data">haemire<span>|</span>2020.10.10</p><i></i></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                                <div class="rel_product"><em>P</em><a href="" class="ellipsis_1">애플 에어팟 프로 MWP22KH/A애플 에어팟 프로 MWP22KH/A</a><span class="eval"><i></i>4.5</span></div>
+                            </div>                            
+                        </li>
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="img_desc desc_youtube">
+                                    <div class="img">
+                                        <img src="../image/img_play.png" class="btn_play" alt="play">
+                                        <img src="../image/sam_review.jpeg" class="img_type_review">
+                                    </div>
+                                    <div class="desc ellipsis_3">
+                                        이보다 더 자세할 순 없다! 노캔이 되는 애플 에어팟 프로 언빡싱 & 이틀 사용기!
+                                    </div>
+                                </div>                                
+                                <div class="where"><em class="wh youtube"></em><p class="data">haemire<span>|</span>2020.10.10</p><i></i></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                                <div class="rel_product"><em>P</em><a href="" class="ellipsis_1">애플 에어팟 프로 MWP22KH/A애플 에어팟 프로 MWP22KH/A</a><span class="eval"><i></i>4.5</span></div>
+                            </div>                            
+                        </li>
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="img_desc desc_youtube">
+                                    <div class="img">
+                                        <img src="../image/img_play.png" class="btn_play" alt="play">
+                                        <img src="../image/sam_review.jpeg" class="img_type_review">
+                                    </div>
+                                    <div class="desc ellipsis_3">
+                                        이보다 더 자세할 순 없다! 노캔이 되는 애플 에어팟 프로 언빡싱 & 이틀 사용기!
+                                    </div>
+                                </div>                                
+                                <div class="where"><em class="wh youtube"></em><p class="data">haemire<span>|</span>2020.10.10</p><i></i></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                                <div class="rel_product"><em>P</em><a href="" class="ellipsis_1">애플 에어팟 프로 MWP22KH/A애플 에어팟 프로 MWP22KH/A</a><span class="eval"><i></i>4.5</span></div>
+                            </div>                            
+                        </li>
+                    </ul>
+    
+                    </div>
+    
+                </div>
+                <!-- //list_wrap -->
+
+                <div class="list_wrap">
+
+                    <div class="list_wrap_line">
+    
+                    <div class="group_title">
+                        <p class="title">HOT 리뷰</p>
+                        <a href="" class="more">더보기<em></em></a>
+                    </div>
+    
+                     <!-- S:List Flat -->
+                     <ul class="list_type_flat">
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">에어팟 프로 연결(페어링) 및 사용 후기</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_review.jpeg" class="img_type_review">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        애플 공식 홈페이지에서 329,000원에 구입한 에어팟 프로. 애플 제품만 찾는 사람들에게는 혁신적일 수밖에 없었던 건. 기존 에어팟 1, 2에서는
+                                    </div>
+                                </div>                                
+                                <div class="where wh100"><em class="wh rv"></em><p class="data">haemire<span>|</span>2020.10.10</p></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><strong>도움</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                                <div class="rel_product"><em>P</em><a href="" class="ellipsis_1">애플 에어팟 프로 MWP22KH/A애플 에어팟 프로 MWP22KH/A</a><span class="eval"><i></i>4.5</span></div>
+                            </div>                            
+                        </li>
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">에어팟 프로 연결(페어링) 및 사용 후기</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_review.jpeg" class="img_type_review">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        애플 공식 홈페이지에서 329,000원에 구입한 에어팟 프로. 애플 제품만 찾는 사람들에게는 혁신적일 수밖에 없었던 건. 기존 에어팟 1, 2에서는
+                                    </div>
+                                </div>                                
+                                <div class="where wh100"><em class="wh rv"></em><p class="data">haemire<span>|</span>2020.10.10</p></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><strong>도움</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                                <div class="rel_product"><em>P</em><a href="" class="ellipsis_1">애플 에어팟 프로 MWP22KH/A애플 에어팟 프로 MWP22KH/A</a><span class="eval"><i></i>4.5</span></div>
+                            </div>                            
+                        </li>
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">에어팟 프로 연결(페어링) 및 사용 후기</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_review.jpeg" class="img_type_review">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        애플 공식 홈페이지에서 329,000원에 구입한 에어팟 프로. 애플 제품만 찾는 사람들에게는 혁신적일 수밖에 없었던 건. 기존 에어팟 1, 2에서는
+                                    </div>
+                                </div>                                
+                                <div class="where wh100"><em class="wh rv"></em><p class="data">haemire<span>|</span>2020.10.10</p></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><strong>도움</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                                <div class="rel_product"><em>P</em><a href="" class="ellipsis_1">애플 에어팟 프로 MWP22KH/A애플 에어팟 프로 MWP22KH/A</a><span class="eval"><i></i>4.5</span></div>
+                            </div>                            
+                        </li>
+                    </ul>
+    
+                    </div>
+    
+                </div>
+                <!-- //list_wrap -->   
+
+                <div class="list_wrap">
+
+                    <div class="list_wrap_line">
+    
+                    <!-- 더보기는 타이틀까지 링크 영역을 지정 -->
+                    <div class="group_title">
+                        <p class="title">NEW 제품</p>
+                        <a href="" class="more">더보기<em></em></a>
+                    </div>
+    
+                     <!-- S:List Flat -->
+                     <ul class="list_type_flat">
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">애플 아이패드 프로 10.1인치 3세대</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_product.png" class="img_type_product">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        이어폰 / 무선 / 코드리스 / 커널형 / 블루투스 / ver 5.0 / AAC / 액티브노이즈캔슬링 / 주변소음듣기 / H1칩셋 / 음악재생: 4.5시간 / 충전단자: 라이트닝, 무선충전 / 오토페어링 / 재생/멈춤조절 / 터치버튼 / 핸즈프리통화 / 퀵충전 / 스마트센서 / 생활방수 / 무게:5.4g / 적응형EQ / Qi인증
+                                    </div>
+                                </div>
+                                <div class="evalue"><span class="rate_star rate_star_50"></span>5.0<i>(123,456)</i></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><a href=""><strong>리뷰</strong>123</a><span>|</span><a href=""><strong>한마디</strong>123</a><span>|</span><strong>공유</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                            </div>                            
+                        </li>
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">애플 아이패드 프로 10.1인치 3세대</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_product.png" class="img_type_product">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        이어폰 / 무선 / 코드리스 / 커널형 / 블루투스 / ver 5.0 / AAC / 액티브노이즈캔슬링 / 주변소음듣기 / H1칩셋 / 음악재생: 4.5시간 / 충전단자: 라이트닝, 무선충전 / 오토페어링 / 재생/멈춤조절 / 터치버튼 / 핸즈프리통화 / 퀵충전 / 스마트센서 / 생활방수 / 무게:5.4g / 적응형EQ / Qi인증
+                                    </div>
+                                </div>
+                                <div class="evalue"><span class="rate_star rate_star_50"></span>5.0<i>(123,456)</i></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><a href=""><strong>리뷰</strong>123</a><span>|</span><a href=""><strong>한마디</strong>123</a><span>|</span><strong>공유</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                            </div>                            
+                        </li>
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">애플 아이패드 프로 10.1인치 3세대</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_product.png" class="img_type_product">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        이어폰 / 무선 / 코드리스 / 커널형 / 블루투스 / ver 5.0 / AAC / 액티브노이즈캔슬링 / 주변소음듣기 / H1칩셋 / 음악재생: 4.5시간 / 충전단자: 라이트닝, 무선충전 / 오토페어링 / 재생/멈춤조절 / 터치버튼 / 핸즈프리통화 / 퀵충전 / 스마트센서 / 생활방수 / 무게:5.4g / 적응형EQ / Qi인증
+                                    </div>
+                                </div>
+                                <div class="evalue"><span class="rate_star rate_star_50"></span>5.0<i>(123,456)</i></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><a href=""><strong>리뷰</strong>123</a><span>|</span><a href=""><strong>한마디</strong>123</a><span>|</span><strong>공유</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                            </div>                            
+                        </li>
+                    </ul>
+    
+                    </div>
+    
+                </div>
+                <!-- //list_wrap -->
+
+                <div class="list_wrap">
+
+                    <div class="list_wrap_line">
+    
+                    <!-- 더보기는 타이틀까지 링크 영역을 지정 -->
+                    <div class="group_title">
+                        <p class="title">HOT 제품</p>
+                        <a href="" class="more">더보기<em></em></a>
+                    </div>
+    
+                     <!-- S:List Flat -->
+                     <ul class="list_type_flat">
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">애플 아이패드 프로 10.1인치 3세대</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_product.png" class="img_type_product">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        이어폰 / 무선 / 코드리스 / 커널형 / 블루투스 / ver 5.0 / AAC / 액티브노이즈캔슬링 / 주변소음듣기 / H1칩셋 / 음악재생: 4.5시간 / 충전단자: 라이트닝, 무선충전 / 오토페어링 / 재생/멈춤조절 / 터치버튼 / 핸즈프리통화 / 퀵충전 / 스마트센서 / 생활방수 / 무게:5.4g / 적응형EQ / Qi인증
+                                    </div>
+                                </div>
+                                <div class="evalue"><span class="rate_star rate_star_50"></span>5.0<i>(123,456)</i></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><a href=""><strong>리뷰</strong>123</a><span>|</span><a href=""><strong>한마디</strong>123</a><span>|</span><strong>공유</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                            </div>                            
+                        </li>
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">애플 아이패드 프로 10.1인치 3세대</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_product.png" class="img_type_product">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        이어폰 / 무선 / 코드리스 / 커널형 / 블루투스 / ver 5.0 / AAC / 액티브노이즈캔슬링 / 주변소음듣기 / H1칩셋 / 음악재생: 4.5시간 / 충전단자: 라이트닝, 무선충전 / 오토페어링 / 재생/멈춤조절 / 터치버튼 / 핸즈프리통화 / 퀵충전 / 스마트센서 / 생활방수 / 무게:5.4g / 적응형EQ / Qi인증
+                                    </div>
+                                </div>
+                                <div class="evalue"><span class="rate_star rate_star_50"></span>5.0<i>(123,456)</i></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><a href=""><strong>리뷰</strong>123</a><span>|</span><a href=""><strong>한마디</strong>123</a><span>|</span><strong>공유</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                            </div>                            
+                        </li>
+                        <li>
+                            <div class="list_ea_flat">
+                                <div class="title">
+                                    <p class="ellipsis_1"><a href="">애플 아이패드 프로 10.1인치 3세대</a></p>
+                                </div>
+                                <div class="img_desc">
+                                    <div class="img">
+                                        <img src="../image/sam_product.png" class="img_type_product">
+                                    </div>
+                                    <div class="desc ellipsis_4">
+                                        이어폰 / 무선 / 코드리스 / 커널형 / 블루투스 / ver 5.0 / AAC / 액티브노이즈캔슬링 / 주변소음듣기 / H1칩셋 / 음악재생: 4.5시간 / 충전단자: 라이트닝, 무선충전 / 오토페어링 / 재생/멈춤조절 / 터치버튼 / 핸즈프리통화 / 퀵충전 / 스마트센서 / 생활방수 / 무게:5.4g / 적응형EQ / Qi인증
+                                    </div>
+                                </div>
+                                <div class="evalue"><span class="rate_star rate_star_50"></span>5.0<i>(123,456)</i></div>
+                                <div class="data1"><strong>조회</strong>123<span>|</span><a href=""><strong>리뷰</strong>123</a><span>|</span><a href=""><strong>한마디</strong>123</a><span>|</span><strong>공유</strong>123<span>|</span><strong>좋아요</strong>123</div>
+                            </div>                            
+                        </li>
+                    </ul>
+
+                    최대 100개까지 10개 단위로 추가 로드합니다.
+    
+                    </div>
+    
+                </div>
+                <!-- //list_wrap -->    
+
+            </div>
+
+        </div>
+
+        <div class="copyright">
+            © Copyright 2018 TechonMedia Inc. <a href="" class="more">More</a><br>
+            <a href="" class="more">서비스이용약관</a><em>|</em>
+            <a href="" class="more">개인정보보호정책</a>
+        </div>
+
+        <nav id="menu">
+            <p class="side_log">
+                <a href="#mm-0" class="sidemenu_close"></a>
+                <a href="" class="btn_log">Login/Logout</a>
+            </p>
+            <p class="wrap_loginis">
+                <em class="profile"><img src="../image/img_general_profile_default.png"></em>
+                <span class="level">Level.5</span>
+                <span class="nickname">haemire</span>
+                <span class="subscribe"><strong>구독수</strong>111<em>|</em><strong>구독자</strong>111</span>
+            </p>
+            
+            <ul>
+                <li><span><a>가전.TV.디카</a></span><!-- 1차 -->
+                    <ul>
+                        <li><span>주방가전</span><!-- 2차 -->
+                            <ul>
+                                <li><a href="">냉장고</a></li><!-- 3차 -->
+                                <li><a href="">김치냉장고</a></li>
+                                <li><a href="">전기밥솥</a></li>
+                                <li><a href="">가스/전기레인지</a></li>
+                                <li><a href="">오븐/전자레인지</a></li>
+                                <li><a href="">전기포트/그릴/조리기기</a></li>
+                            </ul>
+                        </li>
+                        <li><span>생활가전</span>
+                            <ul>
+                                <li><a href="">냉장고</a></li>
+                                <li><a href="">김치냉장고</a></li>
+                                <li><a href="">전기밥솥</a></li>
+                                <li><a href="">가스/전기레인지</a></li>
+                                <li><a href="">오븐/전자레인지</a></li>
+                                <li><a href="">전기포트/그릴/조리기기</a></li>
+                            </ul>
+                        </li>
+                        <li><span>계절가전</span>
+                            <ul>
+                                <li><a href="">냉장고</a></li>
+                                <li><a href="">김치냉장고</a></li>
+                                <li><a href="">전기밥솥</a></li>
+                                <li><a href="">가스/전기레인지</a></li>
+                                <li><a href="">오븐/전자레인지</a></li>
+                                <li><a href="">전기포트/그릴/조리기기</a></li>
+                            </ul>
+                        </li>
+                        <li><span>음향가전</span>
+                            <ul>
+                                <li><a href="">냉장고</a></li>
+                                <li><a href="">김치냉장고</a></li>
+                                <li><a href="">전기밥솥</a></li>
+                                <li><a href="">가스/전기레인지</a></li>
+                                <li><a href="">오븐/전자레인지</a></li>
+                                <li><a href="">전기포트/그릴/조리기기</a></li>
+                            </ul>
+                        </li>
+                        <li><span>영상가전</span>
+                            <ul>
+                                <li><a href="">냉장고</a></li>
+                                <li><a href="">김치냉장고</a></li>
+                                <li><a href="">전기밥솥</a></li>
+                                <li><a href="">가스/전기레인지</a></li>
+                                <li><a href="">오븐/전자레인지</a></li>
+                                <li><a href="">전기포트/그릴/조리기기</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                <li><span>컴퓨터.노트북</span>
+                    <ul>
+                        <li><span>영상가전</span>
+                            <ul>
+                                <li><a href="">냉장고</a></li>
+                                <li><a href="">김치냉장고</a></li>
+                                <li><a href="">전기밥솥</a></li>
+                                <li><a href="">가스/전기레인지</a></li>
+                                <li><a href="">오븐/전자레인지</a></li>
+                                <li><a href="">전기포트/그릴/조리기기</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                <li><span>디지털.모바일</span>
+                    <ul>
+                        <li><span>영상가전</span>
+                            <ul>
+                                <li><a href="">냉장고</a></li>
+                                <li><a href="">김치냉장고</a></li>
+                                <li><a href="">전기밥솥</a></li>
+                                <li><a href="">가스/전기레인지</a></li>
+                                <li><a href="">오븐/전자레인지</a></li>
+                                <li><a href="">전기포트/그릴/조리기기</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                <!-- <li class="Divider">Other demos</li> -->
+            </ul>
+        </nav>
+    </div>
+
+    <!-- S:Top Slide -->
+    <div id="scrolltop"></div>
+    
+    <!-- mmenu scripts -->
+    <script src="../js/mmenu.polyfills.js"></script>
+    <script src="../js/mmenu.js"></script>
+    <script>
+        new Mmenu( document.querySelector( '#menu' ));
+        document.addEventListener( 'click', function( evnt ) {
+            var anchor = evnt.target.closest( 'a[href^="#/"]' );
+            if ( anchor ) {
+                evnt.preventDefault();
+            }
+        });
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,491 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+   <script>
+   
+		// 필터
+		/*
+		var filterContType = null;
+		var filterReview = null;
+		var filterReviewDetail = 0;
+		var filterPriceLow = null;
+		var filterPriceHigh = null;
+		var filterCategId = null;
+	 	*/
+	    let gFilterInfo = {};
+	 	let gCategJson = null;
+		
+	 	function initFilterEvents() {
+	   		//log("[initFilterEvents()]")
+	   		
+		   	$('#filter_cont_type').change(function() {
+			   	//log("[filter cont type 변경됨]")
+				
+				// 선택된 값 확인
+				let selected = $(this).val();
+			   	printDetailFilter(selected);				
+			});
+			
+			
+			$('#div_filter_price').change(function() {
+				$('#div_filter_price_input').css("display", "");
+			});
+			
+			$('#filter_review_type').change(function() {
+				let selected = $(this).val();
+			});
+			
+			$('#filter_review_detail_type').change(function() {
+				log("[filter_review_detail]"+$(this).val());
+			});
+	
+			$("#price_low").bind('change', function(){
+				var onlyNumber = /[^0-9]/g;
+				if(onlyNumber.test($(this).val()) ) {
+					alert(msgOnlyNum);
+					$("#price_low").val('');
+				} else if(parseInt($("#price_high").val()) < parseInt($("#price_low").val())) {
+					if(parseInt($("#price_high").val()) > 0) {
+						alert("최저가 값이 최고가 값보다 클수 없습니다.");
+						$("#price_low").val('');
+					}				
+				}
+			});
+			
+			$("#price_high").bind('change', function(){
+				var onlyNumber = /[^0-9]/g;
+				if(onlyNumber.test($(this).val()) ) {
+					alert(msgOnlyNum);
+					$("#price_high").val('');
+				} else if(parseInt($("#price_high").val()) < parseInt($("#price_low").val())) {
+					alert("최고가 값이 최저가 값보다 작을 수 없습니다.");
+					$("#price_high").val('');
+				}
+			});
+	   	}
+	 	
+		
+	   	function initFilterUiprint(uiState, inCategJson) {
+		   //log("[initFilterUiprint()]>>>> ");
+		   
+		   printFilterCateg(inCategJson);
+		   if(uiState == null || uiState['filter'] == null){
+			   return;
+		   }
+		   
+		  // log(uiState['filter']);
+		   
+		   
+		   
+		   gFilterInfo = uiState['filter'];
+		   printFilterUiFromData();
+		   printFilterConditionToParentUi();
+	   	}
+	   
+	   	function printFilterUiFromData(){
+	   		//log("[printFilterUiFromData()]>>>> ");
+	   		//log(gFilterInfo);
+	   		
+	   		if(gFilterInfo['sTarget'] != null) {
+	   			$("#filter_cont_type").val(gFilterInfo['sTarget']).prop("selected", true);
+	   			printDetailFilter($("#filter_cont_type").val());
+	   		} else {
+	   			$("#filter_cont_type").val("all").prop("selected", true);
+	   			//$("#filter_cont_type").val("prod").prop("selected", true);
+	   			
+	   			
+	   			gFilterInfo['sReviewType'] = null;
+	   			gFilterInfo['rContentType'] = null;
+	   			gFilterInfo['minPrice'] = null;
+	   			gFilterInfo['maxPrice'] = null;
+	   			
+	   			$("#div_filter_review_type").css("display", "none");
+	   			$("#div_filter_review_detail_type").css("display", "none");
+	   			$("#div_filter_price_input").css("display", "none");
+	   			$("#div_div_filter_price").css("display", "none");
+	   			
+	   		}
+			   
+			if(gFilterInfo['sReviewType'] != null) {
+				$("#filter_review_type").val(gFilterInfo['sReviewType']).prop("selected", true);
+			} else {
+				$("#filter_review_type").val("all").prop("selected", true);
+			}
+				   
+			   
+			if(gFilterInfo['rContentType'] != null){
+				$("#filter_review_detail_type").val(gFilterInfo['rContentType']).prop("selected", true);
+			} else {
+				$("#filter_review_detail_type").val("all").prop("selected", true);
+			}
+				   
+			
+			
+			if(gFilterInfo['maxPrice'] != null){
+				$("#price_high").val(gFilterInfo['maxPrice']);
+			} else {
+				$("#price_high").val('');
+			}
+				   
+			   		   
+			if(gFilterInfo['minPrice'] != null){
+				$("#price_low").val(gFilterInfo['minPrice']);
+			} else {
+				$("#price_low").val('');
+			}
+			   
+			   
+			let categId = gFilterInfo['categId'];
+			if(categId != null){
+				$("#sel_cate_level1").val(categId.substr(0, 2));
+				selectCateLevel1();
+				$("#sel_cate_level2").val(categId.substr(0, 4));
+				selectCateLevel2();
+				$("#sel_cate_level3").val(categId);
+			} else {
+				clearFilterCateg();
+			}
+	   	}
+	   	
+	   	function printDetailFilter(selected) {
+	   		if(selected == "all") {
+				clearPriceFilter();
+				clearReviewFilter();
+				clearCurationFilter();
+			} else if(selected == "prod") {
+				$('#div_filter_price').css("display", "");
+				$('#div_filter_price_input').css("display", "");
+				clearReviewFilter();
+				clearCurationFilter();
+			} else if(selected == "review") {
+				clearPriceFilter();
+				$('#div_filter_review_type').css("display", "");
+				$('#div_filter_review_detail_type').css("display", "");
+			}
+	   	}
+	   	
+	   	function printFilterConditionToParentUi(){
+	   		//log("[printFilterConditionToParentUi()]>>>> ");
+	   		log(gFilterInfo);
+	   		// 설정된 필터값 리스트 화면에 출력
+			$('#div_filter_list').empty();
+				
+			// Category
+			if(gFilterInfo['categId'] != null && gFilterInfo['categId'] != 'all'){
+				let uiContType = '<a href="javascript:removeFilter(\'categId\')">'+$('#sel_cate_level3 option:checked').text()+'<em></em></a>';
+				$('#div_filter_list').append(uiContType);
+			}
+			
+			// 컨텐츠 타입
+			if(gFilterInfo['sTarget'] != null && gFilterInfo['sTarget'] != 'all'){
+				let uiContType = '<a href="javascript:removeFilter(\'sTarget\')">'+$('#filter_cont_type option:checked').text()+'<em></em></a>';
+				$('#div_filter_list').append(uiContType);
+			}
+			
+			// 리뷰 타입
+			if(gFilterInfo['sReviewType'] != null && gFilterInfo['sReviewType'] != 'all'){
+				let uiReviewType = '<a href="javascript:removeFilter(\'sReviewType\')">'+$('#filter_review_type option:checked').text()+'<em></em></a>';
+				$('#div_filter_list').append(uiReviewType);
+			}
+			
+			// 리뷰 상세 타입
+			if(gFilterInfo['rContentType'] != null && gFilterInfo['rContentType'] != 'all'){
+				let uiReviewDetailType = '<a href="javascript:removeFilter(\'rContentType\')">'+$('#filter_review_detail_type option:checked').text()+'<em></em></a>';
+				$('#div_filter_list').append(uiReviewDetailType);	
+			}
+			
+			// 가격
+			if((gFilterInfo['minPrice'] != null && gFilterInfo['minPrice'] != '') || (gFilterInfo['maxPrice'] != null && gFilterInfo['maxPrice'] != '')) {
+				let uiPrice = '<a href="javascript:removeFilter(\'price\')">';
+				
+				if(gFilterInfo['minPrice'] != null && gFilterInfo['minPrice'] != '')
+					uiPrice = uiPrice + gFilterInfo['minPrice'];
+				
+				uiPrice = uiPrice + '~';
+				
+				if(gFilterInfo['maxPrice'] != null && gFilterInfo['maxPrice'] != '')
+					uiPrice = uiPrice + gFilterInfo['maxPrice'];
+				
+				uiPrice = uiPrice + '<em></em></a>';
+				$('#div_filter_list').append(uiPrice);
+			}
+	   	}
+	   	
+		
+		function getFilterParam() {
+			
+			//log("[getFilterParam()] "  + gFilterInfo);
+			
+			gFilterInfo['sTarget']      = $("#filter_cont_type").val();
+			gFilterInfo['sReviewType']  = $("#filter_review_type").val();		
+			gFilterInfo['rContentType'] = $("#filter_review_detail_type").val();
+			//filterReviewDetail = 0;
+			gFilterInfo['minPrice']     = $("#price_low").val();
+			gFilterInfo['maxPrice']     = $("#price_high").val();
+			
+			if($("#sel_cate_level3").val() != ''){
+				gFilterInfo['categId'] = $("#sel_cate_level3").val();
+			}else {
+				gFilterInfo['categId'] = null;
+			}
+			
+			printFilterConditionToParentUi();
+			
+			
+			let filterParam = '';
+			if(gFilterInfo['sTarget'] != 'all' && gFilterInfo['sTarget'] != null) {
+				filterParam = filterParam + '&sTarget=' + gFilterInfo['sTarget'];
+			}
+			
+			if(gFilterInfo['sReviewType'] != 'all' && gFilterInfo['sReviewType'] != null) {
+				filterParam = filterParam + '&sReviewType=' + gFilterInfo['sReviewType'];
+			}	
+			
+	
+			if(gFilterInfo['rContentType'] != 'all' && gFilterInfo['rContentType'] != null) {
+				filterParam = filterParam + '&rContentType=' +  gFilterInfo['rContentType'];
+			}		
+			
+			if(gFilterInfo['minPrice'] != null && gFilterInfo['minPrice'] != '') {
+				filterParam = filterParam + '&minPrice=' + gFilterInfo['minPrice'];
+			}
+			if(gFilterInfo['maxPrice'] != null && gFilterInfo['maxPrice'] != '') {
+				filterParam = filterParam + '&maxPrice=' + gFilterInfo['maxPrice'];
+			}
+			
+			if(gFilterInfo['categId'] != null) {
+				filterParam = filterParam + '&categId=' + gFilterInfo['categId'];
+			}
+				
+			
+			gFilterInfo['sTarget']
+			
+			
+			hideFilterPage();
+			return filterParam;
+		}
+		
+		function getFilterJson() {
+			//log("[getFilterJson()] "  + gFilterInfo);
+			
+			return gFilterInfo;
+		}
+		
+		function clearContentFilter() {
+			//$('#div_filter_cont_type').css('display', 'none');
+			$("#filter_cont_type option:eq(0)").prop("selected", true);
+		}
+		
+		function clearReviewFilter() {
+			$('#div_filter_review_type').css('display', 'none');
+			$("#filter_review_type option:eq(0)").prop("selected", true);
+		}
+			
+		function clearCurationFilter() {
+			$('#div_filter_review_detail_type').css('display', 'none');
+			$("#filter_review_detail_type option:eq(0)").prop("selected", true);
+		}
+		
+		function clearPriceFilter() {
+			// display: none
+			$('#div_filter_price').css('display', 'none');
+			$('#div_filter_price_input').css('display', 'none');
+			// init value
+			$('#price_low').val('');
+			$('#price_high').val('');
+			$('#price_low').val('');		
+			$("#filter_price option:eq(0)").prop("selected", true); //첫번째 option 선택
+		}
+		
+		function clearFilter() {
+			clearContentFilter();
+			clearReviewFilter();
+			clearCurationFilter();
+			clearPriceFilter();
+			clearFilterCateg();
+		}
+		
+		
+		
+		function clearFilterCateg() {
+			printCategItem("sel_cate_level1", null, 1, true);
+			$("#sel_cate_level2").empty();
+			$("#sel_cate_level3").empty();
+			$("#sel_cate_level2").css("display", "none");
+			$("#sel_cate_level3").css("display", "none");
+		}
+		
+		function printFilterCateg(inCategJson) {
+			if(inCategJson == null) {
+				return;
+			}
+			gCategJson = inCategJson;
+			
+			$("#div_filter_categ").css("display", "block");
+			printCategItem("sel_cate_level1", null, 1, true);
+		}
+		
+		function selectCateLevel1(){
+			let selCateLevel1 = $("#sel_cate_level1").val();
+			if(selCateLevel1 == "00") {	
+				$("#sel_cate_level2").empty();
+				$("#sel_cate_level3").empty();
+				$("#sel_cate_level2").css("display", "none");
+				$("#sel_cate_level3").css("display", "none");
+			} else {
+				printCategItem("sel_cate_level2", selCateLevel1, 2);
+				let selCateLevel2 = $("#sel_cate_level2").val();
+				printCategItem("sel_cate_level3", selCateLevel2, 3);
+			}
+		}
+		
+		function selectCateLevel2(){
+			let selCateLevel2 = $("#sel_cate_level2").val();
+			printCategItem("sel_cate_level3", selCateLevel2, 3);
+		}
+		
+		
+		function printCategItem(selectBoxId, pCategId, level, existShowAll) {
+			if(gCategJson == null){
+				return;
+			}
+			
+			$("#" + selectBoxId).empty();
+			
+			if(existShowAll == true) {
+				$("#"+selectBoxId).append("<option value='00'>전체 보기</option>");
+			}
+			for(let i=0; i<gCategJson.length; i++) {
+				let categ = gCategJson[i];
+				if(categ['level'] == level) {
+					
+					if(pCategId == null || (pCategId != null && categ['categ_id'].startsWith(pCategId))) {
+						$("#" + selectBoxId).append("<option value='"+categ['categ_id']+"'>"+categ['categ_name']+"</option>");
+					} 
+				}
+			}
+			$("#" + selectBoxId).css("display", "block");
+		}
+		
+		
+		///////////////////////////// 필터 관련 메소드 끝 /////////////////////////////
+		
+		function inputKeywordKeyup() {
+			//if(event.keyCode == 13){
+			//	addFilterKeywords();	
+			//}			
+		}
+	   
+		function showFilterPage() {
+			//if($("#keyword").length != 0){
+			//	$("#input_filter_keyword").val($("#keyword").val());
+			//}
+			
+			$("#page").css('display', 'none');
+			$("#filterPage").css('display', '');
+		}
+		
+		function hideFilterPage() {
+			$("#page").css('display', '');
+			$("#filterPage").css('display', 'none');
+		}
+   
+   </script>
+   <div id="filterPage" class="wrap_total" style="display: none;">
+
+       <div class="head_wrap">
+           <a href="javascript:hideFilterPage()" class="btn_back"></a>
+           <div class="title_wrap">
+               <h1 class="title_detail" th:text="#{filter.title.content_detail_filter}">콘텐츠 상세 필터</h1>
+           </div>
+       </div>
+
+       <div class="content">
+
+           <div class="wrap_main_ser wrap_main_ser1">
+               <!-- 
+               <h2 class="fil_title" th:text="#{filter.title.search}">목록내 검색</h2>
+               <div class="main_search_wrap main_search_wrap1">
+                   <input type="text" id="input_filter_keyword" class="search_input input_type_none" onkeyup="inputKeywordKeyup();">
+                   <a href="javascript:filterOkBtn()" class="btn_search"></a>
+               </div>
+               <div id="div_keyword_list" class="fil_cond">
+               </div>
+               -->
+               <!-- <p class="fil_ment">목록내 ‘키워드’ 검색 결과가 없습니다.</p> -->
+               <!-- <p class="fil_ment">목록내 ‘키워드’ 검색 결과가 30개 있습니다.</p> -->
+				
+				<div id="div_filter_categ" style="display: none">
+					<h2 class="fil_title">카테고리</h2>
+					<div class="wrap_account wrap_fil">
+	                   <div  class="wrap_input">
+	                       <select id="sel_cate_level1" onchange="selectCateLevel1()" class="i_select_n i_select_ac">
+	                       
+	                       </select>
+	                       <select id="sel_cate_level2" onchange="selectCateLevel2()" class="i_select_n i_select_ac" style="display: none">
+	                          
+	                       </select>
+	                       <select id="sel_cate_level3" class="i_select_n i_select_ac"  style="display: none">
+	                          
+	                       </select>
+	                   </div>
+	               </div>
+				</div>
+
+               <h2 class="fil_title" th:text="#{filter.title.step_filter}">단계별 필터</h2>
+               <div class="wrap_account wrap_fil">
+                   <div id="div_filter_cont_type" class="wrap_input">
+                       <select id="filter_cont_type" class="i_select_n i_select_ac">
+                           <option value="all" th:text="#{filter.content.all}">전체 보기</option>
+                           <option value="prod" th:text="#{filter.content.prod}">제품 보기</option>
+                           <option value="review" th:text="#{filter.content.review}">리뷰 보기</option>
+                       </select>
+                   </div>
+                   <div id="div_filter_price" class="wrap_input" style="display: none;">
+                       <select id="filter_price" class="i_select_n i_select_ac">
+                           <option th:text="#{filter.price.input_price}">가격대 입력</option>
+                       </select>
+                   </div>
+                   <div id="div_filter_price_input" class="wrap_input winput_price" style="display: none;">
+                       <input type="text" id="price_low" class="input_type_n" placeholder="최저가">
+                       <em>~</em>
+                       <input type="text" id="price_high" class="input_type_n input_type_l" placeholder="최고가">
+                   </div>
+                   <div id="div_filter_review_type" class="wrap_input" style="display: none;">
+                       <select id="filter_review_type" class="i_select_n i_select_ac">
+                           <option value="all" th:text="#{filter.msg.all}">모두 보기</option>
+                           <option value="intall" th:text="#{filter.review.common.review}">일반 리뷰</option>
+                           <option value="short" th:text="#{filter.review.short.review}">Short 리뷰</option>
+                           <option value="curation" th:text="#{filter.review.curation.review}">Curation 리뷰</option>
+                           <option value="extblog" th:text="#{filter.review.extblog}">블로그/뉴스</option>
+                           <option value="extvideo" th:text="#{filter.review.extvideo}">동영상(유튜브)</option>
+                       </select>
+                   </div>
+                   <div id="div_filter_review_detail_type" class="wrap_input" style="display: none;">
+                       <select id="filter_review_detail_type" class="i_select_n i_select_ac">
+                           <option value="all" th:text="#{filter.msg.all}">모두 보기</option>
+                           <option value="000010" th:text="#{filter.review.detail.unbox}">개봉기</option>
+                           <option value="000100" th:text="#{filter.review.detail.install}">설치기</option>
+                           <option value="001000" th:text="#{filter.review.detail.use}">사용기</option>
+                           <option value="010000" th:text="#{filter.review.detail.test}">테스트</option>
+                           <option value="100000" th:text="#{filter.review.detail.compare}">비교</option>
+                           <option value="000001" th:text="#{filter.review.detail.etc}">기타</option>
+                       </select>
+                   </div>
+               </div>
+           </div>
+
+           <a href="javascript:clearFilter()" class="a_reset btn_type_bg btn_type_gray_fill" th:text="#{btn.refresh}">초기화</a>
+
+           <div class="wrap_content">
+
+               <div class="btn">
+                   <a href="javascript:hideFilterPage()" class="btn_type_bg btn_type_gray_none_fill" th:text="#{btn.close}">취소</a>
+                   <a href="javascript:filterOkBtn()" class="btn_type_bg btn_type_orange_fill" th:text="#{btn.ok}">확인</a>
+               </div>
+               
+           </div>
+           
+       </div>
+       <th:block th:replace="/common/bottom_menu.html"></th:block>
+   </div>
+</html>

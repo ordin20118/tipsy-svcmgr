@@ -1,0 +1,80 @@
+	<script>
+			
+		function moveToCateList(categId) {
+			
+			let param = {
+					categId : categId
+			};
+			//location.href = prefix + "/m/cate_list.do#" + encodeURI(JSON.stringify(param));
+			location.href = prefix + "/m/search/search.do?categId=" + categId;
+		}
+	
+	
+	</script>
+	<script th:inline="javascript">
+		let userInfo = /*[[${userInfo}]]*/
+		$(document).ready(function(){
+			log(userInfo);
+		})
+		function moveMyChannel(){
+			location.href = prefix + "/m/channel/channel.do";
+		}
+		function afterLogout(data){
+			if(data['state'] == 0){
+				location.href = prefix + "/m/home.do";
+			} else {
+				alert(getErrorMsg(data['state']));
+			}		
+		}
+	</script>
+	<nav id="menu">
+	        <p class="side_log">
+	            <a href="#mm-0" class="sidemenu_close"></a>
+	            <th:block th:if="${userInfo.loginInfo.loginType == 5}">
+	            	<a th:href="@{/m/login_page.do}" class="btn_log" >Login</a>
+	            </th:block>
+	            <th:block  th:if="${userInfo.loginInfo.loginType != 5}">
+	            	<a href="javascript:logout(afterLogout)" class="btn_log" >Logout</a>
+	            </th:block>
+	        </p>
+	        <p class="wrap_loginis">
+	        	
+	        	<th:block th:if="${userInfo.loginInfo.profileImagePath != null}">
+	        		<em class="profile"><img th:src="|${imgPrefix}/${userInfo.loginInfo.profileImagePath}_300.png?refreshCode=${refreshCode}|"></em>
+	        	</th:block>
+	        	<th:block th:if="${userInfo.loginInfo.profileImagePath == null}">
+	        		<em class="profile"><img th:src="@{/image/img_general_profile_default.png}"></em>
+	        	</th:block>
+	        	
+	           
+	            <th:block th:if="${userInfo.loginInfo.loginType == 5}">
+	            	<span th:text="#{side.login.hello}"></span>
+	            	<span class="nickname" th:text="#{side.login.request}"></span>
+	            	<span th:text="#{side.login.ment}"></span>
+	            </th:block>
+	            <th:block  th:if="${userInfo.loginInfo.loginType != 5}">
+	             	<span class="level" th:text="'Level.' + ${userInfo.loginInfo.level}">Level.5</span>
+	            	<a><span  class="nickname" th:text="${userInfo.loginInfo.nickName}" onclick="moveMyChannel();"></span></a>
+	            <span class="subscribe" th:utext="|<strong>#{count.subscribe}</strong>${userInfo.channelInfo.subsCnt}<em>|+'|'+|</em><strong>#{count.subscriber}</strong>${userInfo.channelInfo.subscriber}|"></span>
+	            </th:block>
+	        </p>	        
+	        <ul>
+	            <li th:each="level1 : ${level1}"><span th:text="${level1.categName}">주방가전</span>
+	                <ul>
+	                	<li th:each="level2 : ${level2}">	                		 
+	                		<th:block th:if="${level2.categId.substring(0,2).equals(level1.categId)}">
+	                			<span th:text="${level2.categName}">주방가전</span>
+	                		</th:block>	                		
+	                		<ul>
+	                			<li th:each="level3 : ${level3}">	                			
+	                				<th:block th:if=${level3.categId.substring(0,4).equals(level2.categId)}>
+			                			<a th:attr="onclick=|javascript:moveToCateList('${level3.categId}')|" th:text="${level3.categName}"></a>
+			                		</th:block>			                		
+	                			</li>
+	                		</ul>	                		
+	                	</li>	                	
+	                </ul>
+	            </li>	           
+	            <!-- <li class="Divider">Other demos</li> -->
+	        </ul>
+	    </nav>

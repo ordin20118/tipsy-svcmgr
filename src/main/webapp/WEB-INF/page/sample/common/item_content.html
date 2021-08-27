@@ -1,0 +1,174 @@
+<th:block th:if="${item.contentInfoType} == ${item.TYPE_PROD}" >
+									<li>
+				                        <div class="list_ea_flat">
+				                        	<a th:href="@{/m/prod/product.do?prod_id=} + ${item.prodId}">
+					                            <div class="title">
+					                                <p class="ellipsis_1"><th:block th:text="${item.dispProdName}"/></p>
+					                            </div>
+					                            <div class="img_desc">
+					                                <div class="img">
+					                                    <img th:src="|${item.representImgUrl}|" class="img_type_product">
+					                                </div>
+					                                <div class="desc ellipsis_4">
+					                                	<th:block th:text="${item.featureDpString}"/>
+					                                </div>
+					                            </div>
+					                            <div class="evalue"><span th:class="|rate_star rate_star_${item.ratingToStarImgCls}|"></span><th:block th:text="${item.ratingAvgAsString}"/><i>(<th:block th:text="${item.ratingCountAsString}"/>)</i>
+					        
+	
+	
+					       							<i>MRP(<th:block th:text="${item.getMRP()}"/>)</i>                
+					                            </div>
+					                        </a>    
+				                            <div class="data1">
+				                            	<strong>조회</strong><th:block th:text="${item.viewCountAsString}"/><span>|</span>
+				                            	<a th:href="@{/m/prod/product.do?prod_id=} + ${item.prodId} + '#conbox1'"><strong th:text="#{review.review}">리뷰</strong><th:block th:text="${item.reviewCountAsString}"/></a><span>|</span>
+				                            	<a th:href="@{/m/prod/product.do?prod_id=} + ${item.prodId} + '#conbox3'"><strong th:text="#{common.comment}">한마디</strong><th:block th:text="${item.commentCountAsString}"/></a><span>|</span>
+				                            	<strong th:text="#{btn.share}">공유</strong><th:block th:text="${item.shareCountAsString}"/><span>|</span>
+				                            	<strong th:text="#{common.like}">좋아요</strong><th:block th:text="${item.likeCountAsString}"/>
+				                           </div>
+				                        </div>
+				                    </li>
+</th:block>
+
+
+<th:block th:if="${item.contentInfoType} == ${item.TYPE_REVIEW_EXT_VIDEO}">
+
+									<th:block th:if="${item.representImgUrl} != null">
+				                 		<li>
+					                        <div class="list_ea_flat">
+					                        	<a th:href="@{/m/review/ext.do?rel_id=} + ${item.reviewId}">
+						                            <div class="img_desc desc_youtube">
+						                                <div class="img">
+						                                    <img th:src="@{/image/img_play.png}" class="btn_play" alt="play">
+						                                    <img th:src="|${item.representImgUrl}|" class="img_type_review">
+						                                </div>
+						                                <div class="desc ellipsis_3">
+						                                    <th:block th:text="${item.title}"/>
+						                                </div>
+						                            </div>
+						                            <div class="where"><em th:class="|wh ${item.mallToIconName}|"></em><p class="data"><th:block th:text="${item.nickName}"/><span>|</span><th:block th:text="${item.regDateAsString}"/></p><i></i></div>
+						                            <div class="data1"><strong th:text="#{common.select}">조회</strong><th:block th:text="${item.viewCountAsString}"/><span>|</span><strong th:text="#{common.like}">좋아요</strong><th:block th:text="${item.pickCountAsString}"/>
+						                            
+						                            <i>MRP(<th:block th:text="${item.getMRP()}"/>)</i>
+						                            </div>
+						                        </a>
+						                        <div class="rel_product"><em>P</em><a th:href="@{/m/prod/product.do?prod_id=} + ${item.prodId}" class="ellipsis_1"><th:block th:text="${item.dispProdName}"/></a><span class="eval"><i></i><th:block th:text="${item.ratingAvgAsString}"/></span></div>
+					                        </div>
+					                    </li>
+				                 	</th:block>
+				                 	
+									<th:block th:if="${item.representImgUrl} == null">
+				                 		<li th:id="|ext_${item.reviewId}|">
+					                        <div class="list_ea_flat">
+					                        	<a th:href="@{/m/review/ext.do?rel_id=} + ${item.reviewId}">
+						                            <div class="img_desc desc_youtube">
+						                                <div class="img">
+						                                    <img th:src="@{/image/img_play.png}" class="btn_play" alt="play">
+						                                    <!-- <img th:src="|${item.youtubeImageUrl}|" class="img_type_review"> -->
+						                                    <img th:id="|ext_${item.reviewId}_youtube_img|" th:src="@{/image/img_play.png}" class="img_type_review">
+						                                </div>
+						                                <div class="desc ellipsis_3">
+						                                    <th:block th:text="${item.title}"/>
+						                                </div>
+						                            </div>
+						                            <div class="where"><em th:class="|wh ${item.mallToIconName}|"></em><p class="data"><th:block th:text="${item.nickName}"/><span>|</span><th:block th:text="${item.regDateAsString}"/></p><i></i></div>
+						                            <div class="data1"><strong th:text="#{common.select}">조회</strong><th:block th:text="${item.viewCountAsString}"/><span>|</span><strong th:text="#{common.like}">좋아요</strong><th:block th:text="${item.pickCountAsString}"/>
+						                            
+						                            <i>MRP(<th:block th:text="${item.getMRP()}"/>)</i>
+						                            </div>
+						                        </a>
+						                        <div class="rel_product"><em>P</em><a th:href="@{/m/prod/product.do?prod_id=} + ${item.prodId}" class="ellipsis_1"><th:block th:text="${item.dispProdName}"/></a><span class="eval"><i></i><th:block th:text="${item.ratingAvgAsString}"/></span></div>
+					                        </div>
+					                    </li>
+									<!-- 
+									    <li>
+				                            <div class="list_ea_flat_noimg">
+					                            <a th:href="@{/m/review/ext.do?rel_id=} + ${item.reviewId}">
+					                                <div class="title">
+					                                    <p class="ellipsis_1"><th:block th:text="${item.title}"/></p>
+					                                </div>
+					                                <div class="img_desc">
+					                                    <div class="desc ellipsis_4">
+					                                        <th:block th:text="${item.preview}"/>
+					                                    </div>
+					                                </div>
+					                                <div class="where"><em th:class="|wh ${item.mallToIconName}|"></em><p class="data"><th:block th:text="${item.nickName}"/><span>|</span><th:block th:text="${item.regDateAsString}"/></p><i></i></div>
+					                                <div class="data1"><strong>조회</strong><th:block th:text="${item.viewCountAsString}"/><span>|</span><strong>좋아요</strong><th:block th:text="${item.pickCountAsString}"/></div>
+					                            </a>
+				                                <div class="rel_product"><em>P</em><a th:href="@{/m/prod/product.do?prod_id=} + ${item.prodId}" class="ellipsis_1"><th:block th:text="${item.dispProdName}"/></a><span class="eval"><i></i><th:block th:text="${item.ratingAvgAsString}"/></span></div>
+				                            </div>                            
+				                        </li>
+				                    -->
+				                    </th:block>
+
+</th:block>
+
+
+<th:block th:if="${item.contentInfoType} == ${item.TYPE_REVIEW_INTERNAL} or ${item.contentInfoType} == ${item.TYPE_REVIEW_EXT_ARTICLE}">
+
+									<th:block th:if="${item.representImgUrl} != null">
+										<li>
+				                            <div class="list_ea_flat">
+				                            
+				                            <th:block th:if="${item.contentInfoType} == ${item.TYPE_REVIEW_INTERNAL}">
+				                            	<a th:href="@{/m/review/review.do?review_id=} + ${item.reviewId}">
+				                            </th:block>
+				                            <th:block th:if="${item.contentInfoType} == ${item.TYPE_REVIEW_EXT_ARTICLE}">
+				                            	<a th:href="@{/m/review/ext.do?rel_id=} + ${item.reviewId}">
+				                            </th:block>
+				                            	
+					                                <div class="title">
+					                                    <p class="ellipsis_1"><th:block th:text="${item.title}"/></p>
+					                                </div>
+					                                <div class="img_desc">
+					                                    <div class="img">
+					                                        <img th:src="|${item.representImgUrl}|" class="img_type_review">
+					                                    </div>
+					                                    <div class="desc ellipsis_4">
+					                                        <th:block th:text="${item.preview}"/>
+					                                    </div>
+					                                </div>                                
+					                                <div class="where"><em th:class="|wh ${item.mallToIconName}|"></em><p class="data"><th:block th:text="${item.nickName}"/><span>|</span><th:block th:text="${item.regDateAsString}"/></p><i></i></div>
+										        </a>    
+									            <div class="data1">
+									            	<strong th:text="#{common.select}">조회</strong><th:block th:text="${item.viewCountAsString}"/><span>|</span>
+									            	<th:block th:if="${item.contentInfoType} == ${item.TYPE_REVIEW_INTERNAL}">
+									            		<strong th:text="#{review.evalue.like}">도움</strong><th:block th:text="${item.likeCountAsString}"/><span>|</span>
+									            	</th:block>
+									            	<strong th:text="#{common.like}">좋아요</strong><th:block th:text="${item.pickCountAsString}"/>
+									            	
+									            	<i>MRP(<th:block th:text="${item.getMRP()}"/>)</i>	
+									            </div>
+									            <div class="rel_product"><em>P</em><a th:href="@{/m/prod/product.do?prod_id=} + ${item.prodId}" class="ellipsis_1"><th:block th:text="${item.dispProdName}"/></a><span class="eval"><i></i><th:block th:text="${item.ratingAvgAsString}"/></span></div>
+				                            </div>                            
+				                        </li>
+				                 	</th:block>
+				                 	
+									<th:block th:if="${item.representImgUrl} == null">
+									    <li>
+				                            <div class="list_ea_flat_noimg">
+					                        <th:block th:if="${item.contentInfoType} == ${item.TYPE_REVIEW_INTERNAL}">
+				                            	<a th:href="@{/m/review/review.do?review_id=} + ${item.reviewId}">
+				                            </th:block>
+				                            <th:block th:if="${item.contentInfoType} == ${item.TYPE_REVIEW_EXT_ARTICLE}">
+				                            	<a th:href="@{/m/review/ext.do?rel_id=} + ${item.reviewId}">
+				                            </th:block>
+					                                <div class="title">
+					                                    <p class="ellipsis_1"><th:block th:text="${item.title}"/></p>
+					                                </div>
+					                                <div class="img_desc">
+					                                    <div class="desc ellipsis_4">
+					                                        <th:block th:text="${item.preview}"/>
+					                                    </div>
+					                                </div>
+					                                <div class="where"><em th:class="|wh ${item.mallToIconName}|"></em><p class="data"><th:block th:text="${item.nickName}"/><span>|</span><th:block th:text="${item.regDateAsString}"/></p><i></i></div>
+					                                <div class="data1"><strong th:text="#{common.select}">조회</strong><th:block th:text="${item.viewCountAsString}"/><span>|</span><strong th:text="#{common.like}">좋아요</strong><th:block th:text="${item.pickCountAsString}"/>
+					                                <i>MRP(<th:block th:text="${item.getMRP()}"/>)</i>
+					                                </div>
+					                            </a>    
+				                                <div class="rel_product"><em>P</em><a th:href="@{/m/prod/product.do?prod_id=} + ${item.prodId}" class="ellipsis_1"><th:block th:text="${item.dispProdName}"/></a><span class="eval"><i></i><th:block th:text="${item.ratingAvgAsString}"/></span></div>
+				                            </div>
+				                        </li>
+				                    </th:block>
+</th:block>

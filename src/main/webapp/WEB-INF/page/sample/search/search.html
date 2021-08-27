@@ -1,0 +1,879 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+
+<link rel="stylesheet" th:href="@{/css/swiper.min.css}"></link>
+<!-- Swiper JS -->
+<script th:src="@{/js/swiper.min.js}"></script>
+<script th:inline="javascript" th:src="@{/js/tom.search.autocomplate.js}"></script>
+
+
+<script th:inline="javascript">
+	var imgPrefix    = /*[[ ${imgPrefix} ]]*/;
+	var msgBtnPick   = /*[[ #{btn.pick} ]]*/;
+	var keyword      = /*[[${sParam.orgKeyword}]]*/;
+	var prevKeyword	 = keyword;
+	var precessedKeyword = /*[[${sParam.keyword}]]*/;
+	let sCompanyList = /*[[${sCompanyList}]]*/;
+	let sCategList   = /*[[${sRatedCategList}]]*/;
+	let sResult  	 = /*[[${sResult}]]*/;
+	let extVideo  	 = /*[[${extVideo}]]*/;
+	let extArticle   = /*[[${extArticle}]]*/;
+
+
+	
+	let sTarget     = /*[[${sParam.sTarget}]]*/
+	let sReviewType = /*[[${sParam.sReviewType}]]*/;
+	let sResultSeq  = /*[[${sResult.resultSequence}]]*/;
+	nowCategId      = /*[[${sParam.categIdStr}]]*/;
+	let fCategId	= /*[[${sParam.fCategId}]]*/;
+	let aCategId	= /*[[${sParam.aCategId}]]*/;
+	let companyId	= /*[[${sParam.companyId}]]*/;
+	
+	let extReviewList = new Array();
+	
+	
+	$(document).ready(function() {
+		let tmpExtVideo = JSON.parse(extVideo);
+		let tmpExtReview = JSON.parse(extArticle);	
+		
+		
+		if(tmpExtVideo != null) {
+			extReviewList = tmpExtVideo;
+			loadYoutubeImg(extReviewList);
+		}
+		
+		if(tmpExtReview != null) {
+			extReviewList = tmpExtReview;
+		}
+		
+		
+		//showPanels(false, false, true);
+		initSwiper();
+		activeSearchLink();
+		activeFilter();
+	
+		genQsToFCondition();
+		printFCondition();
+		
+		if(sCategList != null) {
+			addFCondition(FTYPE_SPECIFIC, sCategList[0]['disp_key'], sCategList[0]['key']);
+		}
+
+		scrollAndAutoMore();
+		
+		log(sCompanyList);
+	});
+	
+	
+	function initSwiper(){
+		<!-- Initialize Swiper -->
+        var swiper = new Swiper('.swiper-container', {
+            pagination: '.swiper-pagination',
+            paginationClickable: true
+        });
+        
+        jQuery(document).ready(function(){
+            jQuery(".pmore").click(function(){
+                jQuery(".ss_feature").each(function(){
+                    jQuery(this).toggleClass('ss_feature_exp');  
+                });
+                jQuery(".pmore").each(function(){
+                    jQuery(this).toggleClass('pmore_c');      
+                });
+            });
+        });
+	}
+	
+	function activeSearchLink() {
+		if(sTarget == null) {
+			$("#a_link_").addClass("on");
+			log("#a_link_");
+		} else if(sTarget == 'prod') {
+			$("#a_link_prod").addClass("on");
+			log("#a_link_prod");
+		} else if(sTarget == 'review') {
+			$("#a_link_review_" + sReviewType).addClass("on");
+			log("#a_link_review_" + sReviewType);
+		}
+	}
+	
+	
+	function activeFilter() {
+		$("#div_filter_prod").css("display", "none");
+		$("#div_filter_review").css("display", "none");
+		
+		
+		if(sTarget == 'prod' || (sTarget == null && sResultSeq[0] == 'prod')) {
+			$("#div_filter_prod").css("display", "block");
+			
+		} else if(
+				sTarget == 'review' || 
+				(sTarget == null && sResultSeq[0] == 'review_ext_video') || 
+				(sTarget == null && sResultSeq[0] == 'review_article')) {
+			
+			$("#div_filter_review").css("display", "block");
+		}
+	}
+	
+	
+	function initUiprint(uiState) {	
+    }
+	
+	
+	
+	function scrollAndAutoMore() {
+		if(sTarget == null || sTarget == ''){
+			return;
+		}
+		
+		//log("REGISTER scrollAndAutoMore");
+		jQuery(window).scroll(function() {
+			if ((jQuery(window).scrollTop()+100) >= jQuery(document).height() - jQuery(window).height()) {
+				if(currentPage != null && searchEof == false) {
+					//log("CALL End Of Windows  SearchPage("+(currentPage+1)+")")
+					searchMore(currentPage+1, null, true);
+				}
+			}
+		});
+	}
+	
+	let searchEof = false;
+	let currentPage = 1;
+	
+	function search(nowPage, isInit, appendRow) {
+		//log("search ["+nowPage+"]["+isInit+"]["+appendRow+"]");
+		
+		if(sTarget != null){
+			searchMore(1);
+			return;
+		}
+		
+		searchEof = false;
+		currentPage = nowPage;
+		
+		//일반검색..
+		let keyword = encodeURIComponent($("#dummy_keyword").val());
+		if(nowCategId == '' && keyword == '') {
+			alert("검색어를 입력하세요!");
+			return;
+		}
+		
+		currentPage = nowPage;
+		let urlParam = 'paging.nowPage=' + nowPage + 
+    	//'&keyword='+ keyword +
+    	'&keyword='+ precessedKeyword +
+    	'&orgKeyword='+ keyword +
+    	'&paging.perPage=10' +
+    	'&orderby.field=rating' +
+    	//'&categId=' + nowCategId
+    	'';
+		if(sTarget != null && sTarget != '') {
+			urlParam = urlParam + '&sTarget=' +sTarget;
+		}
+		if(sReviewType != null && sReviewType != '') {
+			urlParam = urlParam + '&sReviewType=' +sReviewType;
+		}
+		if(aCategId != null) {
+			urlParam = urlParam + "&aCategId=" + aCategId;
+		}
+		if(companyId != null) {
+			urlParam = urlParam + "&companyId=" + companyId;
+		}
+		
+		
+		let addedQs = genFConditionToQs();		
+		urlParam = urlParam + "&" + addedQs;
+		
+		
+    	let url = prefix + '/api/search/aggregate_search.do?' + urlParam;
+    	log("search URL : ["+url+"]");
+    	
+		$.ajax({
+	        url: url,
+	        type:'get',
+	        success:function(data){
+	        	log("[aggregate search result]");
+	        	log(data);
+	        	if(data['state'] == 0) {
+	        		printSearchResult(data, isInit, appendRow);
+	        		//일단 막자..
+	        		if(appendRow == null) {
+	        			history.replaceState(null, null, '?' + urlParam);		
+	        		}
+	    		} else{
+	    			alert(getErrorMsg(data['state']));
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+		
+		$("#keyword").blur();
+	}
+	
+	function printSearchResult(data, isInit, appendRow) {
+		let sParam = data['sparam'];
+		let paging = sParam['paging'];
+		//log("paging['now_page'] :: " + paging['now_page']);
+		
+		
+		if(appendRow == true) {
+
+			$("#ul_result_prod").append(contentInfoListToLi(data['data']['prod_list']));
+			$("#ul_result_review_video").append(contentInfoListToLi(data['data']['ext_video_list']));
+			$("#ul_result_review_agg").append(contentInfoListToLi(data['data']['agg_review_list']));
+			
+		} else {
+			printFCondition();
+			
+			$("#ul_result_prod").empty();
+			$("#ul_result_prod").append(contentInfoListToLi(data['data']['prod_list']));
+			
+			
+			$("#ul_result_review_video").empty();
+			$("#ul_result_review_video").append(contentInfoListToLi(data['data']['ext_video_list']));
+			
+			$("#ul_result_review_agg").empty();
+			$("#ul_result_review_agg").append(contentInfoListToLi(data['data']['agg_review_list']));
+		}
+	}
+	
+	function searchMore(nowPage, isInit, appendRow) {
+		//log("searchMore ["+nowPage+"]["+isInit+"]["+appendRow+"]");
+		currentPage = nowPage;
+		if(nowPage == 1) {
+			searchEof = false;			
+		}
+
+		
+		currentPage = nowPage;
+		let urlParam = 'paging.nowPage=' + nowPage + 
+    	//'&keyword='+ keyword +
+    	'&keyword='+ precessedKeyword +
+    	'&orgKeyword='+ keyword +
+    	'&paging.perPage=10' +
+    	'&orderby.field=rating' +
+    	//'&categId=' + nowCategId
+    	'';
+		
+		if(sTarget != null && sTarget != '') {
+			urlParam = urlParam + '&sTarget=' +sTarget;
+		}
+		if(sReviewType != null && sReviewType != '') {
+			urlParam = urlParam + '&sReviewType=' +sReviewType;
+		}
+		if(aCategId != null) {
+			urlParam = urlParam + "&aCategId=" + aCategId;
+		}
+		if(companyId != null) {
+			urlParam = urlParam + "&companyId=" + companyId;
+		}
+		
+		let addedQs = genFConditionToQs();
+		urlParam = urlParam + "&" + addedQs;
+		
+		
+		//log("[url param]:"+urlParam);
+		
+		
+    	let url = prefix + '/api/search/search_more.do?' + urlParam;
+    	//log("search URL : ["+url+"]");
+    	
+    	if(nowPage == 1){
+    		appendRow = false;
+    	} else {
+    		appendRow = true;
+    	}
+    	
+		$.ajax({
+	        url: url,
+	        type:'get',
+	        success:function(data){
+	        	//log("[search more result]");
+	        	//log(data);
+	        	if(data['state'] == 0) {
+	        		printSearchMoreResult(data, isInit, appendRow);
+	        		//일단 막자..
+	        		//if(appendRow == null) {
+	        		//	history.replaceState(null, null, '?' + urlParam);		
+	        		//}
+	    		} else{
+	    			alert(getErrorMsg(data['state']));
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+		
+		$("#keyword").blur();
+	}
+	
+	
+	function printSearchMoreResult(data, isInit, appendRow) {
+		
+		//log("sTarget ["+sTarget+"] sReviewType["+sReviewType+"]");
+		let filteredExtReview = null;
+		
+		let targetUl = "";
+		if(sTarget == 'prod') {
+			targetUl = "ul_result_prod";
+		} else if(sTarget == 'review' && sReviewType == 'extvideo') {
+			targetUl = "ul_result_review_video";
+		} else if(sTarget == 'review' && sReviewType == 'article') {
+			targetUl = "ul_result_review_agg";
+		}
+	
+		//data = removeDupliExtReview(data);
+		if(sTarget != 'prod') {						
+			// review_id로 중복 체크 
+			filteredExtReview = removeDupliExtReview(data);			
+		}
+		
+		if(appendRow == false){
+			$("#" + targetUl).empty();
+			printFCondition();
+		}
+		
+		
+		$("#" + targetUl).append(contentInfoListToLi(filteredExtReview));
+		
+		if(sTarget == 'review' && sReviewType == 'extvideo'){
+			loadYoutubeImg(filteredExtReview);	
+		}
+				
+		
+		if(data['list'] == null || data['list'].length == 0) {
+			searchEof = true;
+			log("LIST EOF !!");
+		}
+	}
+	
+	function loadYoutubeImg(extVideoList) {
+		// https://i.ytimg.com/vi/B9W1Catx-6M/hqdefault.jpg
+		// https://i.ytimg.com/vi/B9W1Catx-6M/maxresdefault.jpg
+		
+		//log("[loadYoutubeImg()] ext size:"+extVideoList.length);
+		
+		for(var i=0; i<extVideoList.length; i++) {
+			let video = extVideoList[i];
+			let videoId = video['youtube_video_id'];
+			
+			let urlDefault  = "https://i.ytimg.com/vi/" + videoId + "/hqdefault.jpg";		
+		
+			// set youtube img
+			$("#ext_"+video['review_id']+"_youtube_img").attr('src', urlDefault)		    
+		 	.load(function() {
+		    	
+		    	//log("[image load]:"+urlDefault+" result:"+this.complete);
+		    	//log("[image src]:"+this.src);
+		    	//log("[image load]:"+this.name+" naturalWidth:"+this.naturalWidth + " / naturalHeight:"+this.naturalHeight);
+		    	//log("[image load]:"+this.name+" width:"+this.width + " / hegith:"+this.height);
+		    	
+		    	
+		    	var thumbnail = ["hqdefault", "maxresdefault", "mqdefault", "sddefault", "default"];
+		        
+		        
+		        //log("[image src]:"+this.src+" result:"+this.complete);
+		        
+		        var url = this.src;
+		        
+		        // '썸네일 없음' 이미지인 경우
+		        if (this.naturalWidth === 120 && this.naturalHeight === 90) {
+		        	
+		            for (var i = 0, len = thumbnail.length - 1; i < len; i++) {
+		                if (url.indexOf(thumbnail[i]) > 0) {		                	
+		                    this.src = url.replace(thumbnail[i], thumbnail[i + 1]);
+		                	break;
+		                }
+		            }
+		            
+		            if(i == 4) {
+		            	// 해당 데이터 제거 
+		            	$('#ext_'+video['review_id']).remove();
+		            	//log("[아무것도 없다!!] ext_"+video['review_id'] + " 제거");
+		            }
+		        }		        
+		        
+		    }); 
+		    
+		}
+	}
+	
+	
+	function removeDupliExtReview(data) {
+		let extList = data['list'];		
+		let filteredList = new Array();
+		
+		if(extList != null) {
+			for(var i=0; i<extList.length; i++) {				
+				// ext_url, title, nick_name
+				let isUrlDup 	= extReviewList.some(review => review.ext_url === extList[i]['ext_url']);
+				let isTitleDup 	= extReviewList.some(review => review.title === extList[i]['title']);
+				let isNickDup 	= extReviewList.some(review => review.nick_name === extList[i]['nick_name']);
+								
+				//log("url:"+isUrlDup+"/title:"+isTitleDup+"/nick:"+isNickDup);
+								
+				if(isUrlDup == true || (isTitleDup == true && isNickDup == true)) {
+					//log("[외부 리뷰 중복]");
+				} else {
+					//log("[외부 리뷰 추가]");
+					extReviewList.push(extList[i]);
+					filteredList.push(extList[i]);
+				}
+				
+			}
+			
+			return filteredList;
+		}
+	
+		return null;
+	}
+	
+
+	
+	
+	
+	function printFCondition() {
+		$("#div_fcondition_items").empty();
+		
+		let aTagList = $("a");
+		for(let i=0; i<aTagList.length; i++){
+			if($("a")[i].id.startsWith('filter_')) {
+				$($("a")[i]).removeClass("on");
+			}
+		}
+		
+		fConditionList.forEach(function(fCondition){
+			//<a href="">키워드<em></em></a>
+			
+			try {
+				let aTag = '<a href="javascript:removeCondition(\''+fCondition['type']+'\', \''+fCondition['value']+'\')">'+fCondition['text']+'<em></em></a>';
+				
+				log(fCondition);
+				
+				$("#div_fcondition_items").append(aTag);
+				
+				let filterId = "filter_"+fCondition['type'] + "_" + fCondition['value'];
+				log("filterId ["+filterId+"]");
+				
+				
+				
+				for(let i=0; i<aTagList.length; i++){
+					if($("a")[i].id == filterId ) {
+						$($("a")[i]).addClass("on");
+						break;
+					}
+				}
+					
+			} catch (e) {
+				log("printFCondition error! ["+fCondition['type']+"]["+fCondition['value']+"]["+fCondition['text']+"]");
+			}
+
+		});
+	}
+	
+	
+	window.onpopstate = function(event) {
+		log("HISTORY BACK!!!(POP HISTORY) histPushCount "+ event.state);
+	};
+	
+	
+
+	const FTYPE_SPECIFIC= 'fCategId';
+	const FTYPE_COMPANY = 'fCompanyId';
+	const FTYPE_SPEC    = 'spec';
+	const FTYPE_REVIEW  = 'rContentType';
+	
+	let fConditionList = [];
+	
+	function addFCondition(type, text, value, runSearch) {
+		
+		if(existsCondition(type, value)) {
+			return;
+		}
+		if(type == FTYPE_SPECIFIC) {
+			//기존의 카테고리가 fCondition에 있으면 삭제 한다.
+			removeCategSpecificFromFCondition();
+		} 
+		let fCondition = {
+			'type'  : type,
+			'text'  : text,
+			'value' : value};
+		
+		log("[fCondition]");
+		log(fCondition);
+		
+		fConditionList.push(fCondition);
+		
+		
+		if(runSearch == null || runSearch) {
+			search(1);	
+		}
+	}
+	
+	function removeCondition(type, value, runSearch) {
+		for(let i=0; i<fConditionList.length; i++) {
+			let fCondition = fConditionList[i];
+			
+			if(fCondition['type'] == type && fCondition['value'] == value) {
+				fConditionList.splice(i, 1);
+				break;
+			}
+		}
+		if(runSearch == null || runSearch) {
+			search(1);	
+		}
+	}
+	
+	function existsCondition(type, value) {
+		for(let i=0; i<fConditionList.length; i++) {
+			let fCondition = fConditionList[i];
+			
+			if(fCondition['type'] == type && fCondition['value'] == value) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	
+	
+	function removeCategSpecificFromFCondition() {
+		for(let i=0; i<fConditionList.length; i++) {
+			let fCondition = fConditionList[i];
+			
+			if(fCondition['type'] == FTYPE_SPECIFIC) {
+				fConditionList.splice(i, 1);
+				break;
+			}
+		}
+	}
+	
+	// 참고
+	function genFConditionToQs() {
+		let qs = "";
+		fConditionList.forEach(function(fCondition){
+			qs = qs + fCondition['type'] + "=" + fCondition['value'] + "&";
+		});
+		
+		return qs;
+	}
+	
+	function genQsToFCondition() {
+		let params = window.location.search.substr(1).split('&');
+		if (params == "") {
+			return;
+		}
+		
+		let sCompanyMap = {};
+		
+		
+		if(sCompanyList != null){
+			for(let i=0; i<sCompanyList.length; i++) {
+				let sCompany = sCompanyList[i];
+				sCompanyMap[sCompany['key']] = sCompany;
+			}	
+		}
+		let sCategMap = {};
+		if(sCategList != null){
+			for(let i=0; i<sCategList.length; i++) {
+				let sCateg = sCategList[i];
+				sCategMap[sCateg['key']] = sCateg;
+			}	
+		}
+		
+		
+		for (var i=0; i<params.length; ++i) {
+	        let item = params[i].split('=', 2);
+	        if(item.length==2) {
+	        	if(item[0] == FTYPE_COMPANY) {
+	        		let sCompany = sCompanyMap[item[1]];
+	        		let dispName = sCompany == null? item[1]: sCompany['disp_key'];
+	        		addFCondition(FTYPE_COMPANY, dispName, item[1], false);
+	        		
+	        	} else if(item[0] == FTYPE_SPECIFIC) {
+	        		let key      = decodeURI(item[1]);
+	        		
+	        		let dispName = sCategMap == null? item[1]: sCategMap[key]['disp_key'];
+	        		addFCondition(FTYPE_SPECIFIC, dispName, key, false);
+	        		
+	        	} else if(item[0] == FTYPE_SPEC) {
+	        		let key      = decodeURI(item[1]);
+	        		let dispName = key.substring(key.indexOf('_') +1);
+	        		addFCondition(FTYPE_SPEC, dispName, key, false);
+	        		
+	        	} else if(item[0] == FTYPE_REVIEW) {
+	        		
+	        		let key      = decodeURI(item[1]);
+	        		let dispName = key.substring(key.indexOf('_') +1);
+	        		if(key == '000010') {
+	        			dispName = '개봉기';
+	        		} else if(key == '000100') {
+	        			dispName = '설치기';
+	        		} else if(key == '001000') {
+	        			dispName = '사용기';
+	        		} else if(key == '010000') {
+	        			dispName = '테스트';
+	        		} else if(key == '100000') {
+	        			dispName = '비교';
+	        		} else if(key == '000001') {
+	        			dispName = '기타';	
+	        		}	
+	        		addFCondition(FTYPE_REVIEW, dispName, key, false);
+	        	}
+	        }
+	    }
+	}
+	
+	
+	function searchBtn() {
+		//location.href= prefix + "/m/search/search.do?categId="+nowCategId+"&keyword=" + $("#keyword").val();
+		if($("#keyword").val() != '') {
+			location.href= prefix + "/m/search/search.do?keyword=" + $("#keyword").val() +"&prevKeyword="+prevKeyword;	
+		} else {
+			alert('검색어를 입력하세요.');
+		}
+	}
+	
+	function searchDummyBtn() {
+		//location.href= prefix + "/m/search/search.do?categId="+nowCategId+"&keyword=" + $("#keyword").val();
+		if($("#dummy_keyword").val() != '') {
+			location.href= prefix + "/m/search/search.do?keyword=" + $("#dummy_keyword").val() +"&prevKeyword="+prevKeyword;	
+		} else {
+			alert('검색어를 입력하세요.')
+		}
+	}
+	
+	
+	
+	
+	
+</script>
+<body>
+    <div id="page" class="wrap_total">
+        <div class="content">
+        	<th:block th:replace="/main/auto_complate.html"></th:block>
+        	
+            <div id="div_search_result">
+				<div class="wrap_content">
+					<div class="head_wrap">
+			            <a href="#menu" class="btn_sidemenu"><span></span></a>
+			            <a th:href="@{/m/home.do}" class="gohome"></a>
+			            <div class="search_wrap">
+			                <input id="dummy_keyword" type="text" class="search_input input_type"  th:value="${sParam.orgKeyword}" onclick="showSearchPopup(true);" onkeyup="showSearchPopup(true);" autocomplete="off">
+			                <a href="javascript:resetSearchKeyword()" class="btn_reset"></a>
+		                	<a href="javascript:searchDummyBtn()" class="btn_search"></a>
+			            </div>
+			        </div>
+			        
+	
+					<th:block th:if="${releatedKeywordList} != null and ${releatedKeywordList.size()} != 0">
+		                <div id="div_rel_keywords" class="ser_key_cont">
+		                    <span class="latest"><em class="title_deco"></em>연관</span>
+		                    <div class="rel_key">
+		                        <p>
+		                        <th:block th:each="relKeyword: ${releatedKeywordList}">
+		                        	<a th:href="@{/m/search/search.do?keyword=} + ${relKeyword.k} + 'prevKeyword=' + ${sParam.orgKeyword}" th:text="${relKeyword.k}"></a>
+		                        </th:block>
+		                        </p>
+		                    </div>
+		                </div>
+	                </th:block>
+	                
+	                
+	                <div class="tap_result">
+	                    <div class="result_tab">
+	                        <a id="a_link_" th:href="|?keyword=${sParam.orgKeywordStr}&categId=${sParam.categIdStr}|">통합</a>
+	                        <a id="a_link_prod" th:href="|?sTarget=prod&keyword=${sParam.orgKeywordStr}&categId=${sParam.categIdStr}|" >제품</a>
+	                        <a id="a_link_review_extvideo" th:href="|?sTarget=review&sReviewType=extvideo&keyword=${sParam.orgKeyword}&categId=${sParam.categIdStr}|" >동영상</a>
+	                        <a id="a_link_review_article" th:href="|?sTarget=review&sReviewType=article&keyword=${sParam.orgKeywordStr}&categId=${sParam.categIdStr}|" >블로그</a>
+	                    </div>
+	                </div>
+	
+	                <div id="div_filter_prod" class="wrap_content_padding" style="display: none">
+	    				
+	    				
+	    				<div class="ser_key_cont_spec">
+	    					<th:block th:if="${sResult.explains} != null and ${sResult.explains.size()} != 0">
+	    						<th:block th:each="explain: ${sResult.explains}">
+	    							<div class="rel_key" th:text="${explain}"></div>
+	    						</th:block>
+	    						
+	    					</th:block>
+						</div>
+	                    <div class="ser_key_cont_spec">
+	
+							<th:block th:if="${sRatedCategList} != null and ${sRatedCategList.size()} != 0">
+		                    	<div id="div_rel_keywords" class="ser_key_cont_spec_ea">
+				                    <p class="latest">품목</p>
+					                <div class="rel_key" id="div_rel_keywords_items">
+					                	<p>
+										<th:block th:each="sRatedCateg: ${sRatedCategList}">
+				                        	<a th:id="|filter_fCategId_${sRatedCateg.key}|" th:href="|javascript:addFCondition(FTYPE_SPECIFIC, '${sRatedCateg.dispKey}', '${sRatedCateg.key}')|" th:text="|${sRatedCateg.dispKey}(${sRatedCateg.sortScore})(${sRatedCateg.docCount})|"></a>
+				                        </th:block>
+				                        </p>
+					                </div>
+				                </div>
+			                </th:block>
+		                
+							<th:block th:if="${sCompanyList} != null and ${sCompanyList.size()} != 0">
+		                        <div class="ser_key_cont_spec_ea">
+		                            <p class="latest">제조사</p>
+		                            <div class="rel_key">
+		                                <p>
+										<th:block th:each="company : ${sCompanyList}">
+											<a th:id="|filter_fCompanyId_${company.key}|" th:href="|javascript:addFCondition(FTYPE_COMPANY, '${company.dispKey}', '${company.key}')|" th:text="|${company.dispKey}(${company.docCount}, ${#numbers.formatDecimal(company.score,0,2)})|"></a>
+										</th:block>
+		                                </p>
+		                            </div>
+		                        </div>
+	                        </th:block>
+	                       
+		                
+	                        <th:block th:if="${categSpec} != null">
+			                	<th:block th:each="idx : ${#numbers.sequence(0, categSpec.summaryAsJson().length()-1)}">
+				                	<div id="div_rel_keywords" class="ser_key_cont_spec_ea" th:with="spec=${categSpec.summaryAsJson().getJSONObject(idx)}">
+					                    <p class="latest" th:text="${spec.getString('disp_key')}">제조사</p>
+						                <div id="div_rel_keywords_items" class="rel_key">
+											<p>
+											<th:block th:each="i : ${#numbers.sequence(0, spec.getJSONArray('items').length()-1)}">
+												<a th:id="|filter_spec_${spec.getString('key')}_${spec.getJSONArray('items').getString(i)}|" th:href="|javascript:addFCondition(FTYPE_SPEC, '${spec.getJSONArray('items').getString(i)}', '${spec.getString('key')}_${spec.getJSONArray('items').getString(i)}')|" th:text="${spec.getJSONArray('items').getString(i)}"></a>
+											</th:block>
+											</p>
+						                </div>
+					                </div>
+			                	</th:block>
+			                </th:block>
+	                    </div>
+					</div>
+					
+					
+	                    
+	                <div id="div_filter_review" class="wrap_content_padding" style="display: none">
+	    
+	                    <div class="ser_key_cont_spec">
+	
+							<div id="div_rel_keywords" class="ser_key_cont_spec_ea">
+				                <p class="latest">리뷰 내용</p>
+					            <div class="rel_key" id="div_rel_keywords_items">
+					            	<p>
+										<a id="filter_rContentType_000010" href="javascript:addFCondition(FTYPE_REVIEW, '개봉기', '000010')">개봉기</a>
+										<a id="filter_rContentType_000100" href="javascript:addFCondition(FTYPE_REVIEW, '설치기', '000100')">설치기</a>
+										<a id="filter_rContentType_001000" href="javascript:addFCondition(FTYPE_REVIEW, '사용기', '001000')">사용기</a>
+										<a id="filter_rContentType_010000" href="javascript:addFCondition(FTYPE_REVIEW, '테스트', '010000')">테스트</a>
+										<a id="filter_rContentType_100000" href="javascript:addFCondition(FTYPE_REVIEW, '비교',  '100000')">비교</a>
+										<a id="filter_rContentType_000001" href="javascript:addFCondition(FTYPE_REVIEW, '기타',  '000001')">기타</a>
+				                    </p>
+					            </div>
+				            </div>
+	                    </div>
+					</div>
+					
+					<div class="wrap_content_padding">
+						<!-- 위 스팩 요소 선택시에만 사용 : 공간이 남을 수 있음 -->
+	                    <div class="fil_cond1" id="div_fcondition_items">
+	                    </div>
+					</div>
+	                    
+	                    
+
+
+					<th:block th:if="${sResult.exactlyMatchedProd} != null and (${sParam.sTarget} == null or ${#strings.equals(sParam.sTarget, 'prod')} )">
+		                <div class="list_wrap" th:with="item=${sResult.exactlyMatchedProd.prod}, reviews=${sResult.exactlyMatchedProd.reviews}">
+		                
+		                    <div class="list_wrap_line">
+		
+		                    <!-- S:List Flat -->
+		                    <ul class="list_type_flat_exactly">
+		                       <li>
+		                           <div class="list_ea_flat">
+		                           <a th:href="@{/m/prod/product.do?prod_id=} + ${item.prodId}">
+		                               <div class="title">
+		                                   <p class="ellipsis_1" th:text="${item.dispProdName}"></p>
+		                               </div>
+		                               <div class="img_desc">
+		                                   <div class="img">
+		                                       <!-- Swiper -->
+		                                       <div class="swiper-container">
+		                                           <div class="swiper-wrapper">
+		                                           	   <th:block th:each="image : ${item.repAndGenImageUrls}">
+			                                               <div class="swiper-slide">
+			                                                    <img th:src="${image}" alt=""/>
+			                                               </div>
+		                                               </th:block>
+		                                           </div>
+		                                           <!-- Add Pagination -->
+		                                           <div class="swiper-pagination"></div>
+		                                       </div>
+		                                   </div>
+		                               </div>
+		                           </a>
+		                               <div class="evalue"><span th:class="|rate_star rate_star_${item.ratingToStarImgCls}|"></span><th:block th:text="${item.ratingAvgAsString}"/><i>(<th:block th:text="${item.ratingCountAsString}"/>)</i></div>
+		                               <div class="data"><strong>조회</strong><th:block th:text="${item.viewCountAsString}"/><span>|</span><a th:href="@{/m/prod/product.do?prod_id=} + ${item.prodId} + '#conbox3'"><strong>한마디</strong><th:block th:text="${item.commentCountAsString}"/></a><span>|</span><strong>공유</strong><th:block th:text="${item.shareCountAsString}"/><span>|</span><strong>좋아요</strong><th:block th:text="${item.likeCountAsString}"/></div>
+		                               
+		                               <div class="cate"><th:block th:text="${item.categDisplay}"/></div>                              
+		                               <div class="r_spec">
+		
+		                                   <div class="sum_spec">
+		                                       <a class="pmore"></a>
+		                                       <div class="ss_feature">
+		                                           <th:block th:text="${item.featureDpString}"/>
+		                                       </div>
+		                                   </div>
+		
+		                               </div> 
+		                               <div class="data review_t"><a th:href="@{/m/prod/product.do?prod_id=} + ${item.prodId} + '#conbox1'"><strong>리뷰</strong><th:block th:text="${item.reviewCountAsString}"/></a></div> 
+		                               <ul class="r_review">
+		                               		<th:block th:each="review: ${reviews}">
+		                               			<li><a th:href="@{/m/prod/product.do?prod_id=} + ${item.prodId} + '#conbox1'" class="ellipsis_1"><strong>&middot;</strong><th:block th:text="${review.title}"/></a></li>
+		                               		</th:block>
+		                               </ul>                         
+		                           </div>                            
+		                       </li>
+		                   </ul>
+		
+		                   </div>
+		
+		               </div>
+		               <!-- //exactly -->
+					</th:block>
+
+
+				<th:block th:each="result_seq_name : ${sResult.resultSequence}">
+					<th:block th:if="${#strings.equals(result_seq_name, 'prod')}">
+						 <th:block th:replace="/search/result_prod.html"></th:block>
+					</th:block>
+					
+					<th:block th:if="${#strings.equals(result_seq_name, 'review_article')}">
+						<th:block th:replace="/search/result_review_agg.html"></th:block>
+					</th:block>
+					
+					<th:block th:if="${#strings.equals(result_seq_name, 'review_ext_video')}">
+						<th:block th:replace="/search/result_review_video.html"></th:block>
+					</th:block>
+				</th:block>
+				
+	                </div>
+	            </div>
+            </div>
+            
+        
+        	
+        
+        <th:block th:replace="/common/footer.html"></th:block>
+        
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+        <!-- sidemenu -->
+        <th:block th:replace="/common/sidemenu.html"></th:block>
+    </div>
+    
+	<!-- S:Top Slide -->
+    <div id="scrolltop"></div>
+	<!-- mmenu script -->
+    <th:block th:replace="/common/mmenu_script.html"></th:block>
+</body>
+
+</html>

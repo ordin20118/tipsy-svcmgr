@@ -1,0 +1,112 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<script type="text/javascript" th:inline="javascript">
+
+	$(document).ready(function() {
+	}); 
+
+	function moveSearchPage(){
+		location.href = prefix + "/m/search/search.do";
+	}
+	
+	function search(keyword) {		
+		
+		//log("keyword ["+keyword+"]");
+		location.href='search/search.do?keyword=' + encodeURI(keyword);
+	}
+	
+
+</script>
+<body>
+
+    <div id="page" class="wrap_total">
+        <div class="header">
+            <a href="#menu"><span></span></a>
+        </div>
+        <div class="content">
+
+            <div class="wrap_main_ser">
+                <h1>세상의 모든 리뷰</h1>
+                <img src="../image/bi_main.png" class="bi_main" alt="REVUNARA">
+                <div class="main_search_wrap">
+                    <input class="search_input input_type_none" onclick="moveSearchPage()">
+                    <a th:href="@{/m/search/search.do}" class="btn_search"></a>
+                </div>
+                <div class="wrap_main_key">
+                	<th:block th:each="keyword : ${recentSearchKeyword}">
+	                	<a th:href="|javascript:search('${keyword.keyword}')|" th:text="${keyword.keyword}"></a>
+                    </th:block> 
+                </div>
+            </div>
+            
+            <div>
+                <p class="foryou_ment">당신을 위한 추천 콘텐츠</p>
+                <img src="../image/img_foryou.png" class="foryou" alt="foryou">
+
+                <style>
+                .slick-prev:before,.slick-next:before {color:#aaa;font-weight:700;font-size:3rem;}
+                </style>
+                
+				<div id="recent_view">
+					<h2 class="slide_title">
+	                    내가 본 콘텐츠
+	                    <a href="view_hist_contents.do" class="more_btn">더보기<em></em></a>
+	                </h2>
+	                <section class="regular slider">
+	                	<th:block th:each="item: ${recentViewInfo}">
+	                		<th:block th:replace="/common/item_content.html"></th:block>
+		                </th:block>
+	                </section>
+                </div>
+                
+                
+	
+                <div id="pop_contents">
+                	<h2 class="slide_title">
+	                    인기 콘텐츠
+	                    <a href="pop_contents.do" class="more_btn">더보기<em></em></a>
+	                </h2>
+	                <section class="regular slider">
+	                	<th:block th:each="item: ${popContents}">
+	                		<th:block th:replace="/common/item_content.html"></th:block>
+		                </th:block>
+	                </section>
+                </div>
+                
+                <div id="rating_contents">
+                	<h2 class="slide_title">
+	                    평점 높은 콘텐츠
+	                    <a href="rating_contents.do" class="more_btn">더보기<em></em></a>
+	                </h2>
+	                <section class="regular slider">
+	                	<th:block th:each="item: ${ratingContents}">
+	                		<th:block th:replace="/common/item_content.html"></th:block>
+		                </th:block>
+	                </section>
+                </div>
+				
+
+
+                
+
+                
+
+            </div>
+
+        </div>
+		<!-- footer -->
+        <th:block th:replace="/common/footer.html"></th:block>
+		<!-- sidemenu -->
+        <th:block th:replace="/common/sidemenu.html"></th:block>
+    </div>
+
+    <!-- S:Top Slide -->
+    <div id="scrolltop"></div>
+    
+    <!-- mmenu script -->
+    <th:block th:replace="/common/mmenu_script.html"></th:block>
+
+</body>
+
+</html>

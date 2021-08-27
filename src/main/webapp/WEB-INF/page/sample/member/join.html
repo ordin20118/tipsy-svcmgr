@@ -1,0 +1,626 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+
+<script type="text/javascript" th:src="@{/js/scrypt.js}"></script>
+<script type="text/javascript" th:src="@{/js/thirdparty/buffer.js}"></script>
+<script type="text/javascript" th:src="@{/js/thirdparty/setImmediate.js}"></script>
+<script type="text/javascript" th:src="@{/js/thirdparty/unorm.js}"></script>
+
+<script th:inline="javascript">
+
+var enrollInfo = {};
+
+function moveStep(stepNum) {
+	$("#div_step01").css("display", "none");
+	$("#div_step02").css("display", "none");
+	$("#div_step03").css("display", "none");
+	$("#div_step0"+stepNum).css("display", "");
+	
+	$(".jstep").removeClass("jstep_on");
+	$("#jstep0"+stepNum).addClass("jstep_on");
+	
+	if(stepNum == 3){
+		printInfoToStep03();
+	}
+}
+
+function initUiprint(uiState){
+	if(uiState != null) {
+		$("#tx_user_id").val(uiState['id']);
+		$("#tx_user_email").val(uiState['email']);
+
+		$("#cb_svc_agreement").prop('checked',uiState['checked'])
+
+	} 
+}
+
+//isPressedBackKey - 뒤로가기를 해서 페이지가 로드 되었는지 여부.. 
+var isPressedBackKey = false;
+window.onpopstate = function(event) {
+	log("HISTORY BACK!!!(POP HISTORY) "+ event.state);
+	isPressedBackKey = true;
+	initUiprint(event.state);
+};
+
+var currentPageState = null;
+function addHistState() {
+	let pageState = genPageState() ;
+	currentPageState = pageState;
+	history.pushState(pageState, null, '#' + pageState);	
+}
+
+
+function genPageState() {
+	let pageState = {
+			'id' : $("#tx_user_id").val(),
+			'email'     : $("#tx_user_email").val(),
+			'checked'   : $("#cb_svc_agreement").prop('checked')
+	};
+	return encodeURI(JSON.stringify(pageState));
+}
+
+function checkStep01() {
+	/*
+	1. 폼필드 입력값 검증
+	2. Data Build
+	3. Page 이동.
+	*/
+
+	
+	//1. 폼필드 입력값 검증
+	let userId = $("#tx_user_id").val();
+	let pw01   = $("#tx_user_pw01").val();
+	let pw02   = $("#tx_user_pw02").val();
+	let email  = $("#tx_user_email").val();
+
+	if(userId.length == 0 || pw01.length == 0 || pw02.length == 0 || email.length == 0) {
+		alert(/*[[#{req.input.not_enough}]]*/);
+		return;
+	}
+	if(pw01 != pw02) {
+		alert(/*[[#{req.input.not_mached_pw}]]*/);
+		return;
+	}
+	
+	//TODO. 회원 ID 검증(패턴, 중복), email 검증. 체크박스.
+	if($("#cb_svc_agreement").prop('checked')==false){
+		alert(/*[[#{req.input.not_checked}]]*/);
+		return;
+	}
+	//길이 제한
+
+	if(userId.length<4 || userId.length>20)	{
+		alert(/*[[#{req.input.incorrect_form.id}]]*/);
+		return;
+	}
+	
+	//정규식
+	var onlyNum = /^[0-9]*$/;
+	var onlyEng = /^[a-zA-Z]*$/;
+	//var regExpPw = /(?=.*\d{1,50})(?=.*[~`!@#$%\^&*()-+=]{1,50})(?=.*[A-Z]{1,50})(?=.*[a-z]{1,50}).{8,50}$/;
+					
+	var regex = /^.*(?=^.{8,15}$)(?=.*\d)(?=.*[a-zA-Z])(?=.*[!@#$%^&+=]).*$/;
+	var ePattern = /^[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*@[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*.[a-zA-Z]{2,3}$/i;
+	if(onlyNum.test(userId)){
+		alert(/*[[#{req.input.lack.id}]]*/);
+		return;
+	}
+	
+	if(pw01.length >= 8) {
+		//PASS
+		if(regex.test(pw01) == false){
+			alert(/*[[#{req.input.incorrect_form.pw}]]*/);
+			return;
+		}
+		
+	} else {
+		alert(/*[[#{req.input.lack.pw}]]*/);
+		return;
+	}
+	
+	if(!ePattern.test(email)){
+		alert(/*[[#{req.input.incorrect_form.email}]]*/);
+		return;
+	}
+	
+	var url = prefix+"/api/member_mgmt/check_dupl_id_email.do";
+	console.log("[request URL]"+url);
+	
+	var reqData = {
+			id : userId,
+			email : email
+	}
+	
+	$.ajax({
+		url:url,
+		type:"post",
+		data:reqData,
+		success:function(data){
+			log(data);
+			if(data['state'] == STATE_SUCCESS){
+        		let duplMap = data['data'];
+        		if(duplMap['id_dupl']){
+        			alert(/*[[#{res.dupl.id}]]*/);
+        			return;
+        		} else if(duplMap['email_dupl']){
+        			alert(/*[[#{res.dupl.email}]]*/);
+        			return;
+        		} else{
+        			//02. Data Build
+    				var password = new buffer.SlowBuffer(pw01.normalize('NFKC'));
+    				var salt = new buffer.SlowBuffer(genSaltHex().normalize('NFKC'));
+    				var N = 8192;
+    				var r = 8;
+    				var p = 1;
+    				var dkLen = 32;
+    				scrypt(password, salt, N, r, p, dkLen,function(error, progress, key) {
+    					if (error) {
+    						alert(/*[[#{error.scrypt}]]*/);
+    				    } else if (key) {
+    				    	let hashedPw = toHexString(key)+salt;
+    				    	enrollInfo['login_id'] = userId;
+    				    	enrollInfo['password'] = hashedPw;
+    				    	enrollInfo['email'] = email;
+    				    	enrollInfo['svc_aggrement'] = 0;
+    				    	
+    				    	//3. Page 이동.
+    				    	moveStep(2);
+    				    	
+    				    } 
+    				});
+        		}
+        	} else{
+        		alertErrorMessage(data['error_message']);
+    		}
+		},
+		error:function(request, status, error){
+        	alertNetworkErr();
+        }
+	})
+	
+}
+
+function genSaltHex() {
+	var salt = new Uint8Array(4);
+	window.crypto.getRandomValues(salt);
+	return toHexString(salt);
+}
+
+function toHexString (byteArray) {
+	//const chars = new Buffer(byteArray.length * 2);
+	const chars = new Uint8Array(byteArray.length * 2);
+	const alpha = 'a'.charCodeAt(0) - 10;
+	const digit = '0'.charCodeAt(0);
+
+	let p = 0;
+	for (let i = 0; i < byteArray.length; i++) {
+		let nibble = byteArray[i] >>> 4;
+		chars[p++] = nibble > 9 ? nibble + alpha : nibble + digit;
+	    nibble = byteArray[i] & 0xF;
+	    chars[p++] = nibble > 9 ? nibble + alpha : nibble + digit;    
+	}
+	//return chars.toString('utf8');
+	return String.fromCharCode.apply(null, chars);
+}
+
+function checkStep02() {
+	var nickname = ""
+	if($("#tx_nick_name").val().length==0){
+		//닉네임이 입력 안되있으면 이메일 앞이 닉네임 -->변경 -> 아이디가 닉네임
+		nickname = enrollInfo['login_id'];
+	}else{
+		//있으면 입력값이 닉네임.
+		nickname=$("#tx_nick_name").val();
+	}
+	enrollInfo['nick_name'] = nickname;
+	enrollInfo['age']	= $("#sb_age_group").val();
+	enrollInfo['gender']   = $("#sb_gender").val();
+	enrollInfo['profile_image']=$("#file_profile_image")[0].files[0];
+	enrollInfo['recommender_code'] = $("#tx_recommender").val();
+	
+	if($("#tx_recommender").val() != null && $("#tx_recommender").val().length > 0){
+		//추천인 키 유효한지 확인
+		let reqUrl = prefix + "/api/member_mgmt/check_recommender_code.do?recmmCode="+$("#tx_recommender").val();
+		log("[url]"+reqUrl);
+		
+		$.ajax({
+			url : reqUrl,
+			type :'get',
+			success:function(data){
+				log(data);
+				if(data['error_message'] == null){
+	        		if(data['state'] == 0){
+	        			//추천인 존재
+	        			moveStep(3);
+	        		} else {
+	        			//추천인 없음
+	        			alert(/*[[#{res.unusable.recomm_code}]]*/);
+	        		}
+	        	} else {
+	        		alertErrorMessage(data['error_message']);
+	    		}
+			},
+			error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+		})
+	} else {
+		moveStep(3);
+	}
+	moveStep(3);
+}
+
+
+function printInfoToStep03() {
+	let ageGroup = /*[[#{member.age_group}]]*/
+	let ageGroupMore = /*[[#{member.age_group_more}]]*/
+	var age =enrollInfo['age']+ageGroup;
+	if(enrollInfo['age']==0){
+		age = "";
+	}else if(enrollInfo['age']==70){
+		age = enrollInfo['age']+ageGroupMore;
+	}
+	var gender=""
+	if(enrollInfo['gender']=="M"){
+		gender=/*[[#{member.gender.man}]]*/;
+	} else if (enrollInfo['gender']=="F"){
+		gender=/*[[#{member.gender.female}]]*/;
+	}
+	
+	
+	$("#td_user_id").html(enrollInfo['login_id']);
+	$("#td_email").html(enrollInfo['email']);
+	$("#td_now").html(moment().format('YYYY.MM.DD'));
+	$("#td_nick_name").html(enrollInfo['nick_name']);
+	$("#td_age_group").html(age);
+	$("#td_gender").html(gender);
+	$("#td_recommender_code").html(enrollInfo['recommender_code']);
+	
+	
+	//profile image
+	var file = enrollInfo['profile_image'];
+	var reader = new FileReader();
+	reader.addEventListener("load",function(){
+		$("#img_profile").attr("src",reader.result);
+	},false);
+	if(file){
+		reader.readAsDataURL(file);
+		enrollInfo['profile_status']='selected'
+	}else{
+		$("#img_profile").attr("src",prefix+"/image/img_general_profile_default.png")
+		enrollInfo['profile_status']='default'
+	}
+	
+}
+
+function checkStep03() {
+	//아이디, email 한번 더 중복검사 후 회원가입 진행.
+	var url1 = prefix+"/api/member_mgmt/check_dupl_id_email.do";
+	console.log("[request URL]"+url1);
+	console.log(enrollInfo);
+	var reqData = {
+			id : enrollInfo['login_id'],
+			email : enrollInfo['email']
+	}
+	log("Request Data"+reqData);
+	
+	$.ajax({
+		url:url1,
+		type:"post",
+		data:reqData,
+		success:function(data){
+			if(data['state'] == STATE_SUCCESS){
+        		let duplMap = data['data'];
+        		if(duplMap['id_dupl']){
+        			alert(/*[[#{res.dupl.id}]]*/);
+        			moveStep(1);
+        		} else if(duplMap['email_dupl']){
+        			alert(/*[[#{res.dupl.email}]]*/);
+        			moveStep(1);
+        		} else{
+        			console.log(enrollInfo)
+    				var reqData = JSON.stringify(enrollInfo);
+    				
+    				var url2 = prefix+"/api/member_mgmt/enroll_member.do"
+    				console.log(url2)
+    				$.ajax({
+    					url:url2,
+    					type:"post",
+    					data:reqData,
+    					contentType:"application/json",
+    					success:function(data){
+    						log(data);
+    						if(data['state'] == STATE_SUCCESS){
+    							if(data['data'] != null){
+    								uploadProfile(data.data);
+    							}
+    							else{
+    								location.href = prefix+"/m/member_mgmt/join_request_ign.do?email="+enrollInfo['email'];
+    							}
+    						} else{
+    							alertErrorMessage(data['error_message']);
+    						}
+    					},
+    					error:function(request, status, error){
+    			        	alertNetworkErr();
+    			        }
+    				})
+        		}
+        	} else{
+        		alertErrorMessage(data['error_message']);
+    		}
+		},
+		error:function(request, status, error){
+        	alertNetworkErr();
+        }
+	})
+	
+}
+
+function uploadProfile(tempKey){
+	var formData = new FormData;
+	formData.append("profile",enrollInfo['profile_image'])
+	
+	var url = prefix +"/api/member_mgmt/upload_profile.do";
+	
+	$.ajax({
+		url:url,
+		type:"post",
+		contentType:false,
+		processData:false,
+		data:formData,
+		beforeSend : function(xhr){
+            xhr.setRequestHeader("tempKey", tempKey);
+        },
+		success:function(data){
+			if(data['state'] == STATE_SUCCESS){
+				location.href = prefix+"/m/member_mgmt/join_request_ign.do?email="+enrollInfo['email'];
+			} else{
+				alertErrorMessage(data['error_message']);
+			}
+		},
+		error:function(request, status, error){
+			alertNetworkErr();
+		}
+		
+	})
+}
+
+function step2Init(){
+	$("#tx_nick_name").val("");
+	$("#file_profile_image").val("");
+	previewFile();
+	$("#sb_age_group").val(0).attr('selected','selected');
+	$("#sb_gender").val("N").attr('selected', 'selected');
+	enrollInfo['profile_status']='default';
+	
+}
+function jumpStep2Confirm(){
+	$("#layer_skip").css("display","");
+}
+function jumpStep2(){
+	//2step 입력 항목을 초기화 한 후 3으로 이동.
+	step2Init();
+	checkStep02();
+}
+
+function backStep2(){
+	//2step 입력 항목을 초기화 한 후 1로 이동.
+	step2Init();
+	moveStep(1);
+}
+
+function previewFile() {
+	var preview = document.querySelector('img');
+	var file    = document.querySelector('input[type=file]').files[0];
+	var reader  = new FileReader();
+	
+	reader.addEventListener("load", function () {
+	  preview.src = reader.result;
+	}, false);
+
+	if(file){
+		reader.readAsDataURL(file);
+	}else{
+		$("#profile").attr("src",prefix+"/image/img_general_profile_default.png")
+	}
+	
+}
+
+function goTerms(){
+	addHistState();
+	location.href = prefix +"/m/member_mgmt/service_terms.do";
+}
+
+function goPrivacy(){
+	addHistState()
+	location.href = prefix +"/m/member_mgmt/protection_policy.do";
+}
+
+
+
+
+</script>
+<body>    
+	<div id="layer_skip" class="wrap_layer" style="display: none;">
+
+        <!-- 해당 Div만 각 레이어에 사용하면 된다. -->
+        <div class="wrap_box">
+            <div class="layer_close"><span class="layer_off"></span></div>
+            <div class="layer_box">
+                <p class="ch_tit" style="text-align:left;"><strong th:text="#{member.input_info}">정보 입력</strong> <th:block th:text="#{member.jump}">건너뛰기</th:block></p>
+                <p class="ch_desc" style="text-align:center;" th:text="#{member.jump.ask}">부가 항목 입력을 건너뛰기 하시겠습니까?</p>
+            </div>
+            <div class="btn">
+                <a href="javascript:$('#layer_skip').css('display','none')" class="layer_close btn_type_bg btn_type_gray_none_fill" th:text="#{btn.close}">취소</a>
+                <a href="javascript:jumpStep2()"class="btn_type_bg btn_type_orange_fill layer_off" th:text="#{btn.ok}">확인</a>
+            </div>
+        </div>
+        
+        <div class="wrap_dimmed"></div>
+    </div>
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a href="javascript:history.go(-1)" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail" th:text="#{member.enroll2}">회원 가입</h1>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <ul class="join_step">
+                    <li>
+                        <div id="jstep01" class="jstep jstep_on">1</div>
+                        <p th:text="#{member.enroll.step1}">필수 항목 입력</p>
+                    </li>
+                    <li>
+                        <div id="jstep02" class="jstep">2</div>
+                        <p th:text="#{member.enroll.step2}">부가 항목 입력</p>
+                    </li>
+                    <li>
+                        <div id="jstep03" class="jstep">3</div>
+                        <p th:text="#{member.enroll.step3}">입력 항목 확인</p>
+                    </li>
+                </ul>
+
+                <div id="div_step01" class="wrap_log">
+
+                    <div class="wrap_account">
+
+                        <div class="wrap_input">
+                            <!-- 정보 수정 단계는 readonly 클래스를 사용한다. -->
+                            <input id="tx_user_id" type="text" class="input_type_n" th:placeholder="#{member.member_id}" minlength="4">
+                            <p class="join_ment" th:text="#{member.notice.id_form}">아이디는 영문 4자 이상으로 구성</p>
+                            <input id="tx_user_pw01" type="password" class="input_type_n" th:placeholder="#{member.member_pw}" minlength="8">
+                            <input id="tx_user_pw02" type="password" class="input_type_n" th:placeholder="#{member.member_pw_check}" minlength="8">
+                            <p class="join_ment" th:text="#{member.notice.pw_form}">비밀번호는 영문, 숫자, 특수기호 혼합 8자 이상 구성</p>
+                            <input id="tx_user_email" type="text" class="input_type_n" th:placeholder="#{member.member_email}">
+                            <p class="join_ment" th:text="#{member.notice.email}">입력된 이메일로 회원 계정 인증 메일을 발송합니다.</p>
+                        </div>
+
+                        <div class="wrap_account_ment wrap_account_ment3">
+                            <input type='checkbox' class='s_checkbox' id="cb_svc_agreement"><label for="cb_svc_agreement"><em></em><a href="javascript:goTerms()"><u th:text="#{common.term_of_service}">서비스이용약관</u></a> <th:block th:text="#{common.or}">및</th:block> <a href="javascript:goPrivacy()"><u th:text="#{common.privacy_policy}">개인정보보호정책</u></a><th:block th:text="#{member.agree}">에 동의합니다.</th:block></label>
+                        </div>
+
+                        <div class="wrap_oauth">
+                            <a href="javascript:checkStep01()" class="btn_log auth_m" th:text="#{btn.ok}">확인</a>
+                        </div>
+
+                    </div>
+
+                </div>
+                
+                <div id="div_step02" class="wrap_log" style="display:none">
+
+                    <div class="wrap_account">
+
+                        <div class="wrap_input">
+                            <input id="tx_nick_name" type="text" class="input_type_n" th:placeholder="#{member.input.nickname}" maxlength="6">
+                            <p class="join_ment" th:text="#{member.notice.nickname}">영문/한글 6자 이내</p>
+                            <img class="photo" th:src="@{/image/img_general_profile_default.png}" height="30%" width="30%" alt="이미지 미리보기..." id="profile">
+                            <input id="file_profile_image" type="file" class="input_type_n" onchange="previewFile()" accept="image/*">
+                            <select class="i_select i_select_ac" id="sb_age_group" >
+                                <option value=0 th:text="#{member.age}">연령</option>
+                                <option value=10 th:text="|10#{member.age_group}|">10대</option>
+                                <option value=20 th:text="|20#{member.age_group}|">20대</option>
+                                <option value=30 th:text="|30#{member.age_group}|">30대</option>
+                                <option value=40 th:text="|40#{member.age_group}|">40대</option>
+                                <option value=50 th:text="|50#{member.age_group}|">50대</option>
+                                <option value=60 th:text="|60#{member.age_group}|">60대</option>
+                                <option value=70 th:text="|70#{member.age_group_more}|">70대 이상</option>
+                            </select>
+                            <select id="sb_gender" class="i_select i_select_ac">
+                                <option value="N" th:text="#{member.gender}">성별</option>
+                                <option value="M" th:text="#{member.gender.man}">남</option>
+                                <option value="F" th:text="#{member.gender.female}">여</option>
+                            </select>
+                            <input id="tx_recommender" type="text" class="input_type_n" th:placeholder="#{member.input.recomm_key}">
+                            <p class="join_ment" th:text="#{member.notice.recomm_key}">추천인 키를 입력하면 추가 보상을 받습니다.</p>
+                        </div>                        
+
+                    </div>
+
+                    <div class="btn_box">
+                        <a href="javascript:backStep2()" class="btn_type_bg btn_type_gray_none_fill" th:text="#{btn.close}">취소</a>
+                        <a href="javascript:checkStep02()" class="btn_type_bg btn_type_orange_fill" th:text="#{btn.ok}">확인</a>
+                        <a href="javascript:jumpStep2Confirm()" class="btn_type_bg btn_type_gray_fill" th:text="#{member.jump}">건너뛰기</a>
+                    </div>
+
+                </div>
+                
+				<div id="div_step03" class="wrap_log" style="display:none">
+
+                    <div class="wrap_account">
+
+                        <div class="wrap_table">
+                            <table class="tb_type_noline">
+	                            <colgroup>
+		                            <col style="width:35%;">
+		                            <col style="width:65%;">
+	                            <col>
+	                            </colgroup>
+	                            <tr>
+	                                <th th:text="#{member.member_id}">아이디</th>
+	                                <td id="td_user_id"></td>
+	                            </tr>
+	                            <tr>
+	                                <th th:text="#{member.member_pw}">비밀번호</th>
+	                                <td>**********</td>
+	                            </tr>
+	                            <tr>
+	                                <th th:text="#{member.member_email}">이메일</th>
+	                                <td id="td_email"></td>
+	                            </tr>
+	                            <tr>
+	                                <th th:text="#{member.reg_date}">가입일</th>
+	                                <td id="td_now"></td>
+	                            </tr>
+	                            <tr>
+	                                <th th:text="#{member.nickname}">별명</th>
+	                                <td id="td_nick_name"></td>
+	                            </tr>
+	                            <tr>
+	                                <th th:text="#{member.profile}">프로필</th>
+	                                <td><img id="img_profile" th:src="@{/image/img_general_profile_default.png}" alt="" class="photo"></td>
+	                            </tr>
+	                            <tr>
+	                                <th th:text="#{member.age}">연령</th>
+	                                <td id="td_age_group"></td>
+	                            </tr>
+	                            <tr>
+	                                <th th:text="#{member.gender}">성별</th>
+	                                <td id="td_gender"></td>
+	                            </tr>
+	                            <tr>
+	                                <th th:text="#{member.recomm_key}">추천인 키</th>
+	                                <td id="td_recommender_code"></td>
+	                            </tr>
+                            </table>
+                            
+                        </div>
+    
+                        <div class="btn_box">
+                            <a href="javascript:moveStep(2)" class="btn_type_bg btn_type_gray_none_fill" th:text="#{member.back}">뒤로</a>
+                            <a href="javascript:checkStep03()" class="btn_type_bg btn_type_orange_fill" th:text="#{btn.ok}">확인</a>
+                        </div>              
+
+                    </div>
+
+                </div>
+            </div>
+            
+        </div>
+
+         <th:block th:replace="/common/footer.html"></th:block>
+
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<script th:inline="javascript">
+
+function modifyEmail(nowEmail){
+
+	let modifyEmail  = $("#tx_email").val();
+
+	if(modifyEmail.length == 0) {
+		alert(/*[[#{req.input.lack.email}]]*/);
+		return;
+	}
+	//정규식
+	var ePattern = /^[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*@[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*.[a-zA-Z]{2,3}$/i;
+	if(!ePattern.test(modifyEmail)){
+		alert(/*[[#{req.input.incorrect_form.email}]]*/);
+		return;
+	}
+	
+	var url = prefix+"/api/member_mgmt/change_email.do";
+	console.log("[request URL]"+url);
+	//변경 전 이메일/변경 할 이메일
+	var reqData = {
+			nowEmail : nowEmail,
+			modifyEmail : modifyEmail
+	}
+	
+	$.ajax({
+		url:url,
+		type:"post",
+		data:reqData,
+		success:function(data){
+			log(data);
+			if(data['error_message'] == null){
+        		alert(/*[[#{res.send_email}]]*/);
+        		location.href = prefix;
+        	} else{
+    			alert(getErrorMsg(data['state']));
+    		}
+		},
+		error:function(request, status, error){
+        	alertNetworkErr();
+        }
+	});
+}
+</script>
+<body>    
+
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a href="" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail">회원 계정 인증</h1>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <div class="wrap_log">
+
+                    <div class="wrap_account">
+                        <div class="wrap_sbody">
+                            <h2>인증 기간이 만료되었습니다.<p style="font-size:1rem;padding-top:10px;" th:text="|${#calendars.format(member.regDate,'YYYY년 MM월 dd일 HH:mm')} 신청됨|">2020년 0월 0일 14:34 회원가입 신청됨</p></h2>
+
+                            <div class="wrap_input">
+                                <input type="text" id="tx_email" class="input_type_n" placeholder="이메일 입력">
+                                <p class="join_ment">인증을 위한 이메일 계정을 입력하세요.</p>
+                            </div>
+
+                            <p class="ment">
+                                인증 메일 확인 후 인증 버튼을
+                                클릭하셔야<br>회원가입이 완료됩니다.                                
+                            </p>
+                        </div>
+                       
+                        <div class="btn_box">
+                            <a th:href="|javascript:modifyEmail('${member.email}')|" class="btn_type_bg btn_type_gray_none_fill" th:text="#{member.modify}">수정</a>
+                            <a th:href="@{/}" class="btn_type_bg btn_type_orange_fill" th:text="#{btn.ok}">확인</a>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+            
+        </div>
+
+        <th:block th:replace="/common/footer.html"></th:block>
+
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

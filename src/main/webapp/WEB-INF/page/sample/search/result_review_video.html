@@ -1,0 +1,19 @@
+            		<th:block th:if="${sResult.extVideoList} != null and ${sResult.extVideoList.size()} != 0">
+						<div class="list_wrap">
+			                <div class="list_wrap_line">
+			                <!-- 더보기는 타이틀까지 링크 영역을 지정 -->
+			                <div class="group_title">
+			                    <p class="title">동영상</p>
+			                    <th:block th:if="${sParam.sTarget} == null">
+			                    	<a th:href="|?sTarget=review&sReviewType=extvideo&keyword=${sParam.orgKeywordStr}&categId=${sParam.categIdStr}|" class="more">더보기<em></em></a>
+			                    </th:block>
+			                </div>
+			                 <!-- S:List Flat -->
+			                 <ul id="ul_result_review_video" class="list_type_flat">
+				                 <th:block th:each="item: ${sResult.extVideoList}">
+				                 	<th:block th:replace="/common/item_content.html"/>
+				                </th:block>
+			                </ul>
+			                </div>
+			            </div>
+            		</th:block>

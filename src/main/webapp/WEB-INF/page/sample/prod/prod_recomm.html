@@ -1,0 +1,263 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+
+<script th:inline="javascript">
+	/*<![CDATA[*/
+	
+	var imgPrefix  = /*[[ ${imgPrefix} ]]*/;
+	var recommType = /*[[ ${recomm_type} ]]*/;
+	var prodId     = /*[[ ${prod.prod.prodId} ]]*/;
+	var prodName   = /*[[ ${prod.prod.prodName} ]]*/;
+	var categId    = /*[[ ${prod.prod.categId} ]]*/;
+	
+	var msgBtnPick = /*[[ #{btn.pick} ]]*/;
+	/*]]*/
+
+	$(document).ready(function() {
+		let pageStatus = getPageStatusJson();
+		
+		initUiprint(pageStatus);
+
+		
+		jQuery(window).scroll(function() {
+			if (jQuery(window).scrollTop() == jQuery(document).height() - jQuery(window).height()) {
+				if(currentPage != null) {
+					log("CALL End Of Windows  SearchPage("+(currentPage+1)+")")
+					getRecommProd(currentPage+1);
+				}
+			}
+		});
+	});
+
+	var currentViewType = VIEW_CARD_TYPE;
+	var currentSorting  = SORT_RATING;
+	var currentPage     = null;
+	var currentScroll   = null;
+	var currentPage     = 1;
+	
+	
+	function initUiprint(uiState) {
+		if(uiState != null) {
+			let keyword     = uiState['keyword'];
+	    	currentViewType = uiState['currentViewType'];
+	    	currentSorting  = uiState['currentSorting'];
+	    	currentScroll   = uiState['currentScroll'];
+	    	currentPage     = uiState['currentPage'];
+		}
+		
+		if(recommType == 'prod') {
+			$("#h1_title").text(prodName + "의 추천/유사 제품");
+			
+		} else if(recommType == 'review') {
+			$("#h1_title").text(prodName + "의 리뷰");
+			
+		} else if(recommType == 'review_nothumb') {
+			$("#h1_title").text("블로그/뉴스");
+		} 
+		
+		if(recommType == 'review_nothumb') {
+			currentViewType = VIEW_FLAT_TYPE;
+		} 
+		
+		$("#ul_recomm_list").removeClass();
+		if(currentViewType == VIEW_CARD_TYPE) {
+			$("#a_view_type").addClass("vf_type_card");
+			$("#ul_recomm_list").addClass("list_type_card");
+		} else {
+			$("#a_view_type").addClass("vf_type_flat");
+			$("#ul_recomm_list").addClass("list_type_flat");
+		}
+		
+		getRecommProd(currentPage, true);
+    }
+	
+	function getRecommProd(nowPage, isInit) {
+		currentPage = nowPage;
+		
+		
+		let urlParam = 'paging.nowPage=' + nowPage + 
+    	'&categId='+ categId +
+    	'&selProdId=' + prodId +
+    	'&recommType=' + recommType +
+    	'&paging.perPage=6';
+		
+		
+		
+		if(isInit) {
+			urlParam = 'paging.nowPage=1' + 
+			'&categId='+ categId +
+	    	'&selProdId=' + prodId +
+	    	'&recommType=' + recommType +
+	    	'&paging.perPage=' + (nowPage * 6);
+		}
+		
+		
+		let url = prefix + '/api/recomm/get_contents.do?' + urlParam;
+		if(recommType == 'review_nothumb') {
+			url = prefix + '/api/recomm/get_ext_contents.do?' + urlParam;
+		} 
+		
+		log("REQ URL ["+url+"]");
+		
+		
+		$.ajax({
+	        url: url,
+	        type:'get',
+	        success:function(data){
+	        	if(data['state'] == STATE_SUCCESS){
+	        		//log("[Recomm Prod]", 0);
+		        	//log(data, 0);
+		        	printRecommContents(data, isInit);
+	        	} else{
+	    			alert(getErrorMsg(data['state']));
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	
+	function printRecommContents(data, isInit) {
+		let list = data['list'];
+		if(recommType == 'review_nothumb') {
+			for(let i=0; i<list.length; i++) {
+				let relData = list[i];
+				let url     = relData['url'];
+				let wDate   = moment(relData['write_date']);
+	            let liHtml = makeNoThumbContentLi(list[i]);
+		        
+				$("#ul_related_content_list").append(liHtml);	
+				$("#div_relcontent_" + relData['rel_id']).bind("click", function() {
+					window.open("about:blank").location.href = relData['url'];
+				});
+			}
+			
+			
+		} else {
+			$("#ul_recomm_list").append(makeContentLiList(list, currentViewType));
+			
+			
+			if(isInit == true) {
+				log("currentScroll : " + currentScroll);
+				$('html, body').animate({scrollTop : currentScroll}, 200);
+			}
+		}
+	}
+	
+	
+	
+	
+	function moveProd(prodId) {
+		addHistState();
+		location.href = prefix + '/m/prod/product.do?prod_id=' + prodId;
+	}
+	
+	function moveReview(reviewId) {
+		addHistState();
+		location.href = prefix + '/m/review/review.do?review_id=' + reviewId;
+	}
+	
+	
+	let currentPageState = null;
+	function addHistState() {
+		let pageState = genPageState() ;
+		currentPageState = pageState;
+		history.pushState(pageState, null, '#' + pageState);	
+		//log("ADD HISTOR Y" + pageState)
+	}
+
+	
+	function genPageState() {
+		let pageState = {
+				'currentViewType' : currentViewType,
+				'currentSorting'  : currentSorting,
+				'currentPage'     : currentPage,
+				'currentScroll'   : $(document).scrollTop(),
+		};
+		return encodeURI(JSON.stringify(pageState));
+	}
+	
+	function changeViewType() {
+		$("#ul_recomm_list").empty();
+		$("#ul_related_content_list").empty();
+		
+		$("#a_view_type").removeClass();
+		$("#ul_recomm_list").removeClass();
+		if(currentViewType == VIEW_CARD_TYPE) {
+			currentViewType = VIEW_FLAT_TYPE;
+			
+			$("#a_view_type").addClass("vf_type_flat");
+			$("#ul_recomm_list").addClass("list_type_flat");
+		} else {
+			currentViewType = VIEW_CARD_TYPE;
+			$("#a_view_type").addClass("vf_type_card");
+			$("#ul_recomm_list").addClass("list_type_card");
+		}
+		
+		getRecommProd(1);
+		
+	}
+
+</script>
+<body>
+    <div id="page" class="wrap_total">
+
+        
+        <div id="div_document_title" class="head_wrap" >
+            <a href="javascript:history.go(-1)" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 id="h1_title" class="title_detail" ></h1>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+                <div class="wrap_content_padding">
+                
+                    <ul id="ul_word_suggest" class="ser_key_history" style="margin-top:10px; display: none" >           
+                    </ul>
+                
+                    <div id="div_search_result" >
+                    	
+	                    
+	                    <!-- S:View Filter -->
+	                    <div class="wrap_viewfilter" >
+	
+	                        <div class="viewfilter_filter">
+	                            <a href="javascript:alert('NotYet')" class="vf_type_filter"></a>
+	                        </div>                       
+	
+	                        <div class="viewfilter_type">
+	                            <a id="a_view_type" href="javascript:changeViewType()" class="vf_type_card"></a>
+	                        </div>
+	                        <div class="viewfilter_sort">
+	                            <select id="select_sorting" class="input_type_none" onchange="javascript:alert('NotYet')">
+	                                <option value="popularity">인기순</option>
+	                                <option value="rating">평점순</option>
+	                                <option value="latest">최신순</option>
+	                            </select>
+	                        </div>
+	
+	                    </div>
+	                    
+	                    <!-- S:List Card -->
+	                    <ul id="ul_recomm_list" class="list_type_card">
+	                    </ul>
+	                    <ul id="ul_related_content_list" class="list_type_flat_noimg">
+		                </ul>
+	                    
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

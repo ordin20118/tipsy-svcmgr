@@ -1,0 +1,399 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+
+
+<script th:inline="javascript" th:src="@{/js/tom.search.autocomplate.js}"></script>
+
+
+<script th:inline="javascript">
+	var imgPrefix   = /*[[ ${imgPrefix} ]]*/;
+	var msgBtnPick  = /*[[ #{btn.pick} ]]*/;
+	var keyword     = /*[[${sParam.orgKeyword}]]*/;
+	
+	
+	let sCompanyList = /*[[${sCompanyList}]]*/;
+	
+
+	
+	$(document).ready(function() {
+		showPanels(false, false, true);
+		genQsToFCondition();
+		printFCondition();
+	});
+	
+	function initUiprint(uiState) {	
+    }
+
+	
+	var contextPath = $('#contextPathHolder').attr('data-contextPath') ? $('#contextPathHolder').attr('data-contextPath') : '';
+	
+	
+	function search(nowPage, isInit) {
+		log("searchMore ["+nowPage+"]["+isInit+"]");
+		
+		//일반검색..
+		let keyword = encodeURIComponent($("#keyword").val());
+		if(keyword == '') {
+			return;
+		}
+		
+		
+		
+		currentPage = nowPage;
+		
+		
+		let urlParam = 'paging.nowPage=' + nowPage + 
+    	'&keyword='+ keyword +
+    	'&paging.perPage=30' +
+    	'&orderby.field=' + currentSorting +
+    	'';
+    	
+		let addedQs = genFConditionToQs();
+		urlParam = urlParam + "&" + addedQs;
+		
+		
+		
+    	let url = prefix + '/api/search/aggregate_search.do?' + urlParam;
+    	log("search URL : ["+url+"]");
+    	
+    	
+		showPanels(false, false, true);
+		
+		$.ajax({
+	        url: url,
+	        type:'get',
+	        success:function(data){
+	        	//log(data);
+	        	if(data['state'] == 0) {
+	        		printSearchResult(data, isInit);
+	        		history.replaceState(null, null, '?' + urlParam);	
+	    		} else{
+	    			alert(getErrorMsg(data['state']));
+	    		}
+	        	
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+		
+		$("#keyword").blur();
+	}
+	
+	
+	function printSearchResult(data, isInit) {
+		let sParam = data['sparam'];
+		let paging = sParam['paging'];
+		
+		log("paging['now_page'] :: " + paging['now_page']);
+		
+		if(paging['now_page'] == 1) {
+			$("#ul_search_list").empty();
+		}
+		printFCondition();
+		
+		prod = data['data']['prod_list']
+		let lis = makeContentLiList(prod, currentViewType);
+		$("#ul_search_list").append(lis);
+		
+	}
+	
+	
+	function printFCondition() {
+		$("#div_fcondition_items").empty();
+		
+		
+		fConditionList.forEach(function(fCondition){
+			let aTag = '<a>'+fCondition['text']+'</a><a href="javascript:removeCondition(\''+fCondition['type']+'\', \''+fCondition['value']+'\')">(X)</a>';
+			$("#div_fcondition_items").append(aTag);
+		});
+		
+	}
+	
+	
+	window.onpopstate = function(event) {
+		log("HISTORY BACK!!!(POP HISTORY) histPushCount "+ event.state);
+	};
+	
+	
+
+	const FTYPE_SPECIFIC= 'categSpecific';
+	const FTYPE_COMPANY = 'companyId';
+	const FTYPE_SPEC    = 'spec';
+	let fConditionList = [];
+	
+	function addFCondition(type, text, value, runSearch) {
+		
+		if(existsCondition(type, value)) {
+			return;
+		}
+		if(type == FTYPE_SPECIFIC) {
+			//기존의 카테고리가 fCondition에 있으면 삭제 한다.
+			removeCategSpecificFromFCondition();
+		} 
+		let fCondition = {
+			'type'  : type,
+			'text'  : text,
+			'value' : value};
+		fConditionList.push(fCondition);
+		
+		
+		if(runSearch == null || runSearch) {
+			search(1);	
+		}
+	}
+	function removeCondition(type, value, runSearch) {
+		for(let i=0; i<fConditionList.length; i++) {
+			let fCondition = fConditionList[i];
+			
+			if(fCondition['type'] == type && fCondition['value'] == value) {
+				fConditionList.splice(i, 1);
+				break;
+			}
+		}
+		if(runSearch == null || runSearch) {
+			search(1);	
+		}
+	}
+	
+	function existsCondition(type, value) {
+		for(let i=0; i<fConditionList.length; i++) {
+			let fCondition = fConditionList[i];
+			
+			if(fCondition['type'] == type && fCondition['value'] == value) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	
+	
+	function removeCategSpecificFromFCondition() {
+		for(let i=0; i<fConditionList.length; i++) {
+			let fCondition = fConditionList[i];
+			
+			if(fCondition['type'] == FTYPE_SPECIFIC) {
+				fConditionList.splice(i, 1);
+				break;
+			}
+		}
+	}
+	
+	function genFConditionToQs() {
+		let qs = "";
+		fConditionList.forEach(function(fCondition){
+			qs = qs + fCondition['type'] + "=" + fCondition['value'] + "&";
+		});
+		
+		return qs;
+	}
+	
+	function genQsToFCondition() {
+		let params = window.location.search.substr(1).split('&');
+		if (params == "") {
+			return;
+		}
+		
+		let sCompanyMap = {};
+		for(let i=0; i<sCompanyList.length; i++) {
+			let sCompany = sCompanyList[i];
+			sCompanyMap[sCompany['key']] = sCompany;
+		}
+		
+		for (var i=0; i<params.length; ++i) {
+	        let item = params[i].split('=', 2);
+	        if(item.length==2) {
+	        	if(item[0] == FTYPE_COMPANY) {
+	        		let sCompany = sCompanyMap[item[1]];
+	        		let dispName = sCompany == null? item[1]: sCompany['disp_key'];
+	        		addFCondition(FTYPE_COMPANY, dispName, item[1], false);
+	        		
+	        	} else if(item[0] == FTYPE_SPECIFIC) {
+	        		let key      = decodeURI(item[1]);
+	        		let dispName = key.substring(6);
+	        		addFCondition(FTYPE_SPECIFIC, dispName, key, false);
+	        		
+	        	} else if(item[0] == FTYPE_SPEC) {
+	        		let key      = decodeURI(item[1]);
+	        		let dispName = key.substring(key.indexOf('_') +1);
+	        		addFCondition(FTYPE_SPEC, dispName, key, false);
+	        	}
+	        }
+	    }
+	}
+	
+	
+</script>
+<body>
+    <div id="page" class="wrap_total">
+
+        <div id="div_keyword_input" class="head_wrap">
+            <a href="javascript:showPanels(false, false, true);" class="btn_back"></a>
+            <div class="search_wrap">
+                <input id="keyword" type="text" th:value="${sParam.orgKeyword}" class="search_input input_type" onclick="showPanels(true, true, false)" onkeyup="enterkey();">
+                <a href="javascript:resetInput()" class="btn_reset"></a>
+                <a href="javascript:search(1, null, null, true)" class="btn_search"></a>
+            </div>
+        </div>
+        <div id="div_document_title" class="head_wrap" style="display: none">
+            <a th:href="@{/m/home.do}" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 id="h1_title" class="title_detail" ></h1>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+                <div class="wrap_content_padding">
+                	<ul id="ul_word_suggest" class="ser_key_history" style="margin-top:10px; display: none" > 
+                 	
+                 	    
+                	</ul>
+                    
+                    <div id="div_recent_search_words">
+                    	<div class="ser_key_cont">
+	                        <span class="latest"><em class="title_deco"></em>최근 검색어</span>
+	                        <a href="javascript:deleteRecentSearchWord()" class="alldel" >전체 삭제</a>
+	                    </div>
+	                    
+	                    
+	                     <th:block if="${recentKeywords} != null and ${recentKeywords.size()} != 0">
+		                 	<ul id="ul_recent_keywords" class="ser_key_history">
+		                 		<th:block th:each="rKeyword: ${recentKeywords}">
+		                 			<li>
+						                <a th:href="@{/m/search/search.do} + '?keyword=' + ${rKeyword.keyword}" th:id="'recw_'+ ${rKeyword.shistId}" class="ser_key"><i></i><th:block th:text="${rKeyword.keyword}"/></a>
+						                <a th:href="|javascript:deleteRecentSearchWord('${rKeyword.shistId}')|" class="ser_date" th:text="${#dates.format(rKeyword.searchDate, 'yyyy.MM.dd')}"><em class="del"></em></a>
+						            </li>
+		                 		</th:block>
+	                    	</ul>
+		                </th:block>
+		                
+		                <th:block if="${recentKeywords} == null or ${recentKeywords.size()} == 0">
+			                <div id="div_no_recent_keywords" class="ser_key_none" style="display: none">
+		                        최근 검색어가 없습니다.
+		                    </div>
+		                </th:block>
+	               </div>
+	               
+	               <div id="div_pop_search_words">
+	                    <div style="border-top:1px solid #eee;margin:20px 0 10px 0;"></div>
+	                    <th:block th:if="${searchStatDto} != null">
+		                    <div class="ser_key_cont">
+		                        <span class="latest"><em class="title_deco"></em>인기 검색어</span>
+		                        <span class="period" th:text="${#dates.format(searchStatDto.statBegin, 'yyyy-MM-dd') + ' ~ ' + #dates.format(searchStatDto.statEnd, 'MM-dd')}"></span>
+		                    </div>
+	                    </th:block>
+	                    
+	                    
+	                    <ol class="ser_key_hot">
+	                    
+	                    	<th:block th:each="popKeyword: ${popularKeywords}">
+		                        <li>
+		                            <a th:href="@{/m/search/search.do} + '?keyword=' + ${popKeyword.keyword}">
+		                                <span class="ser_num" th:text="${popKeyword.rank}"></span>
+		                                <span class="ser_key" th:text="${popKeyword.keyword}">검색어</span>
+		                                <th:block th:if="${popKeyword.prevRank} == null">
+		                                	<span class="ser_updown ser_new">NEW</span>
+		                                </th:block>
+		                                <th:block th:if="${popKeyword.prevRank} != null and ${popKeyword.rank} == ${popKeyword.prevRank}">
+		                                	<span class="ser_updown ser_u">-</span>
+		                                </th:block>
+		                                <th:block th:if="${popKeyword.prevRank} != null and ${popKeyword.rank} > ${popKeyword.prevRank}">
+		                                	<span class="ser_updown ser_down"><em></em><span th:text="${T(Math).abs(popKeyword.rank - popKeyword.prevRank)}"></span></span>
+		                                </th:block>
+		                                
+		                                <th:block th:if="${popKeyword.prevRank} != null and ${popKeyword.rank} < ${popKeyword.prevRank}">
+		                                	<span class="ser_updown ser_up"><em></em><span th:text="${T(Math).abs(popKeyword.rank - popKeyword.prevRank)}"></span></span>
+		                                </th:block>
+		                            </a>
+		                        </li>
+	                        </th:block>
+	                    </ol>
+                    </div>
+                    
+                    
+                    <div id="div_search_result" style="display: none">
+                    	<th:block th:if="${releatedKeywordList} != null and ${releatedKeywordList.size()} != 0">
+                    		<div id="div_rel_keywords" class="ser_key_cont">
+		                        <span class="latest"><em class="title_deco"></em>연관</span>
+		                        <div id="div_rel_keywords_items" class="rel_key">
+		                        	<th:block th:each="relKeyword: ${releatedKeywordList}">
+		                        		<a th:href="@{/m/search/search.do?keyword=} + ${relKeyword.k}" th:text="${relKeyword.k}"></a>
+		                        	</th:block>
+		                            
+		                        </div>
+		                        <span id="span_sresult_msg" class="ment"></span>
+		                    </div>
+                    	</th:block>
+                    	
+                    	
+                    	<th:block th:if="${sRatedCategList} != null and ${sRatedCategList.size()} != 0">
+	                    	<div id="div_rel_keywords" class="ser_key_cont">
+			                    <span class="latest"><em class="title_deco"></em>품목</span>
+				                <div id="div_rel_keywords_items" class="rel_key">
+									<th:block th:each="sRatedCateg: ${sRatedCategList}">
+			                        	<a th:href="|javascript:addFCondition(FTYPE_SPECIFIC, '${sRatedCateg.dispKey}', '${sRatedCateg.key}')|" th:text="|${sRatedCateg.dispKey}(${sRatedCateg.docCount})|"></a>
+			                        </th:block>
+				                </div>
+				                <span id="span_sresult_msg" class="ment"></span>
+			                </div>
+		                </th:block>
+		                
+		                
+		                <th:block th:if="${sCompanyList} != null and ${sCompanyList.size()} != 0">
+			                <div id="div_rel_keywords" class="ser_key_cont">
+				            	<span class="latest"><em class="title_deco"></em>제조사</span>
+					            <div id="div_rel_keywords_items" class="rel_key">
+									<th:block th:each="company : ${sCompanyList}">
+										<a th:href="|javascript:addFCondition(FTYPE_COMPANY, '${company.dispKey}', '${company.key}')|" th:text="|${company.dispKey}(${company.docCount})|"></a>
+									</th:block>
+					            </div>
+					        	<span id="span_sresult_msg" class="ment"></span>
+				            </div>
+		                </th:block>
+		                
+		                <th:block th:if="${categSpec} != null">
+		                	<th:block th:each="idx : ${#numbers.sequence(0, categSpec.summaryAsJson().length()-1)}">
+			                	<div id="div_rel_keywords" class="ser_key_cont" th:with="spec=${categSpec.summaryAsJson().getJSONObject(idx)}">
+				                    <span class="latest"><em class="title_deco"></em> <th:block th:text="${spec.getString('disp_key')}"/></span>
+					                <div id="div_rel_keywords_items" class="rel_key">
+										
+										<th:block th:each="i : ${#numbers.sequence(0, spec.getJSONArray('items').length()-1)}">
+											<a th:href="|javascript:addFCondition(FTYPE_SPEC, '${spec.getJSONArray('items').getString(i)}', '${spec.getString('key')}_${spec.getJSONArray('items').getString(i)}')|" th:text="${spec.getJSONArray('items').getString(i)}"></a>
+										</th:block>
+					                </div>
+					                <span id="span_sresult_msg" class="ment"></span>
+				                </div>
+		                	</th:block>
+		                </th:block>
+		                        
+						<div id="div_fcondition" class="ser_key_cont">
+							<span class="latest"><em class="title_deco"></em>Filter</span>
+					        <div id="div_fcondition_items" class="rel_key">
+							</div>
+					       	<span id="span_sresult_msg" class="ment"></span>
+				        </div>          
+		                        
+	                    
+	                    <!-- S:List Card -->
+	                    <ul id="ul_search_list" class="list_type_card">
+	                    	<th:block th:if="${sResult} != null">
+	                    		<th:block th:each="item: ${sResult.prodList}">
+		                        	<th:block th:replace="/common/item_content.html"></th:block>
+		                        </th:block>
+	                    	</th:block>
+	                    </ul>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

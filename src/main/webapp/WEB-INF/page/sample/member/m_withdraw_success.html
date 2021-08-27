@@ -1,0 +1,50 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+
+
+<body>    
+
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a href="" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail">회원 탈퇴</h1>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <div class="wrap_log">
+
+                    <div class="wrap_account">
+                        <div class="wrap_sbody">
+                            <h2>회원 탈퇴 완료</h2>
+                            <p class="ment">
+                                회원님의 정보와 활동 이력이 정상적으로 처리되어 탈퇴 완료되었습니다.<br><br>                                
+                                리뷰나라는 언제나 사용자를 향해 열려 있습니다. 다음에 더 좋은 서비스로 만나기 기대합니다.<br><br>                                
+                                감사합니다. 
+                            </p>
+                        </div>
+                        <div class="wrap_oauth">
+                            <a th:href="@{/m/home.do}" class="btn_log auth_m">확인</a>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+            
+        </div>
+
+        <th:block th:replace="/common/footer.html"></th:block>
+
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

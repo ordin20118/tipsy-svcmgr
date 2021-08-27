@@ -1,0 +1,289 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<script th:inline="javascript">
+
+	const REWARD_TYPE_PLUS = 0;
+	const REWARD_TYPE_MINUS = 1;
+	
+	const TOKEN_TYPE_REVU = 0;
+	const TOKEN_TYPE_RENA = 1;
+
+	var actInfo = /*[[${actInfo}]]*/;
+	var rewardHist = /*[[${rewardHist}]]*/;
+	let filterType = 0;
+	let sortType = SORT_TYPE_DESC;
+	let moreJobResult = true;
+	let currentPage = 1;
+	let dataCnt = /*[[${histSize}]]*/;
+	
+	$(document).ready(function(){
+		log(actInfo);
+		log(rewardHist);
+		
+		jQuery(window).scroll(function() {
+			if (jQuery(window).scrollTop() >= jQuery(document).height() - jQuery(window).height()) {
+				if(moreJobResult && dataCnt < 100) {
+					getRewardHist(currentPage+1, 20);
+		    	}
+			}
+		});	
+		
+	})
+	
+	function getRewardHist(nowPage, perPage){
+		let urlParam = 'paging.nowPage=' +nowPage +
+  		'&paging.perPage=' + perPage +
+  		'&orderby.field=reg_date' +
+  		'&orderby.sorting='+sortType;
+  		if(filterType != null){
+  			urlParam += '&filterType='+filterType;
+  		}
+  		
+		let reqUrl = prefix +'/api/member_info/get_reward_hist.do?'+urlParam;
+		
+		$.ajax({
+	        url: reqUrl,
+	        type:'get',
+	        success:function(data){
+	        	log(data);
+	        	if(data['state'] == STATE_SUCCESS){
+	        		currentPage = nowPage;
+	        		printRewardHistory(data['list']);
+	        	} else{
+	        		alertErrorMessage(data['error_message']);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	function printRewardHistory(list){
+		let appendLi = makeRewardAppendLi(list);
+		
+		$("#ul_reward_history").append(appendLi);
+		
+		dataCnt += list.length;
+		if(list.length < 20){
+			moreJobResult = false;
+		}
+	}
+	
+	function makeRewardAppendLi(list){
+		let appendLi = "";
+		if(list.length > 0){
+			for(let i=0; i<list.length; i++){
+				if(list[i]['reward_type'] == REWARD_TYPE_PLUS){
+					appendLi += makePlusRewardLi(list[i]);
+				} else {
+					appendLi += makeMinusRewardLi(list[i]);
+				}
+			}
+		}
+		return appendLi;
+	}
+
+	function makePlusRewardLi(data){
+		
+		let rewardInfo = data['reward_info'];
+		let rewardDetail = data['reward_detail'];
+		
+		let tokenString = '';
+		let tokenKey = '';
+		if(data['token_type'] == TOKEN_TYPE_REVU){
+			tokenString = 'REVU';
+			tokenKey = 'revu';
+		} else {
+			tokenString = 'RENA';
+			tokenKey = 'rena';
+		};
+		
+		let wordPay = /*[[#{member.reward.pay}]]*/
+		
+		let regDate = "-";
+		if(rewardInfo['reg_date'] != null){
+			regDate = moment(rewardInfo['reg_date']).format('YYYY.MM.DD HH:mm');
+		}
+		
+		appendLi = 	'<li>'+
+					'    <div class="tl_type1">'+
+					'    	<div class="s_plusminus s_plus">+</div>'+
+					'        <div class="cont">'+
+					'            <p class="time">'+regDate+'</p>'+
+					'            <p class="title"><span class="type1">'+wordPay+'</span>'+data['action_name']+'</p>';
+		if(rewardDetail['content_type'] != null){
+			appendLi += '        <p class="desc"><a href="javascript:moveProd('+rewardDetail['content_id']+')">'+data['content_title']+'</a></p>';
+		}
+		appendLi +=	'            <p class="detail detail_plus"><strong>'+tokenString+'</strong> +'+rewardInfo[tokenKey]+'</p>'+
+					'        </div>'+
+					'    </div>'+
+					'</li>';
+		return appendLi;
+	}
+	
+	function makeMinusRewardLi(data){
+		let rewardInfo = data['reward_info'];
+		let rewardDetail = data['reward_detail'];
+		
+		let tokenString = '';
+		let tokenKey = '';
+		if(data['token_type'] == TOKEN_TYPE_REVU){
+			tokenString = 'REVU';
+			tokenKey = 'revu';
+		} else {
+			tokenString = 'RENA';
+			tokenKey = 'rena';
+		};
+		let regDate = "-";
+		if(rewardInfo['reg_date'] != null){
+			regDate = moment(rewardInfo['reg_date']).format('YYYY.MM.DD HH:mm');
+		}
+		
+		let wordSubstract = /*[[#{member.reward.substract}]]*/
+		
+		appendLi = 	'<li>'+
+					'    <div class="tl_type1">'+
+					'    	<div class="s_plusminus s_minus">-</div>'+
+					'        <div class="cont">'+
+					'            <p class="time">'+regDate+'</p>'+
+					'            <p class="title"><span class="type2">'+wordSubstract+'</span>'+data['action_name']+'</p>';
+		if(rewardDetail['content_type'] != null){
+			appendLi += '        <p class="desc"><a href="javascript:moveProd('+rewardDetail['content_id']+')">'+data['content_title']+'</a></p>';
+		}
+		appendLi +=	'            <p class="detail detail_minus"><strong>'+tokenString+'</strong> +'+rewardInfo[tokenKey]+'</p>'+
+					'        </div>'+
+					'    </div>'+
+					'</li>';
+		return appendLi;
+	}
+	
+	function changeFilterType(){
+		log($("#sel_filter_type").val());
+		filterType = $("#sel_filter_type").val();
+		
+		contentClear()
+		getRewardHist(1, 20);
+	}
+	
+	function changeSortType(){
+		log($("#sel_sort_type").val());
+		sortType = $("#sel_sort_type").val();
+		contentClear()
+		getRewardHist(1, 20);
+	}
+	
+	function contentClear(){
+		$("#ul_reward_history").empty()
+	}
+</script>
+<body>    
+
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a th:href="@{/m/channel/channel.do}" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail" th:text="#{member.reward_hist}">보상 내역</h1>
+                <a href="" class="info_klay" th:utext="|#{member.reward.exchange_klay}<em></em>|">Klay 교환하기<em></em></a>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <div class="bg_gray">
+
+                    <div class="wrap_content_padding" style="margin-bottom:0;">
+                        
+                        <div class="wrap_myinfo">
+
+                            <ul class="mydata_now">
+                                <li>
+                                    <a href="">
+                                        <span class="tit">REVU</span>
+                                        <p class="num" th:text="${actInfo.totalRevu}">250</p>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="">
+                                        <span class="tit">RENA</span>
+                                        <p class="num" th:text="${actInfo.totalRena}">250</p>
+                                    </a>
+                                </li>
+                            </ul>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="wrap_content_padding" style="margin-top:10px;">
+
+                    <!-- S:View Filter -->
+                    <div class="wrap_viewfilter">
+
+                        <div class="viewfilter_filter">
+                             <select id="sel_filter_type" class="input_type_none" onchange="changeFilterType()">
+                                <option value = 0 th:text="#{filter.option.all_view}">전체보기</option>
+                                <option value = 1 th:text="#{filter.option.revu_view}">REVU보기</option>
+                                <option value = 2 th:text="#{filter.option.rena_view}">RENA보기</option>
+                            </select>
+                        </div>                          
+
+                        <div class="viewfilter_sort">
+                            <select id="sel_sort_type" class="input_type_none" onchange="changeSortType()" >
+                                <option value = "desc" th:text="#{common.orderby_lately}">최신순</option>
+                                <option value = "asc" th:text="#{common.orderby_firstly}">처음순</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <ul id="ul_reward_history" class="timeline_wrap" th:if="${histSize > 0}">
+                    <th:block th:each="rewardHist : ${rewardHist}" th:with="TYPE_PROD=100, TYPE_REVIEW=210, TYPE_EXT_REVIEW=220, TYPE_COMPARE=300">
+                    	<li>
+                            <div class="tl_type1">
+                                <div class="s_plusminus s_plus" th:if="${rewardHist.rewardType == 0}">+</div>
+                                <div class="s_plusminus s_minus" th:if="${rewardHist.rewardType == 1}">-</div>
+                                <div class="cont">
+                                    <p class="time" th:text="${#calendars.format(rewardHist.rewardInfo.regDate,'YYYY.MM.dd HH:mm')}">2020.10.10 14:34</p>
+                                    <p class="title">
+	                                    <span class="type1" th:if="${rewardHist.rewardType == 0}" th:text="#{member.reward.pay}">지급</span>
+	                                    <span class="type2" th:if="${rewardHist.rewardType == 1}" th:text="#{member.reward.substract}">차감</span>
+	                                    <th:block th:text="${rewardHist.actionName}"></th:block>
+                                    </p>
+                                    <p class="desc" th:if="${rewardHist.contentTitle != null}">
+	                                    <a th:if="${rewardHist.rewardDetail.contentType == TYPE_PROD}" th:href="|javascript:moveProd(${rewardHist.rewardDetail.contentId})|" th:text="${rewardHist.contentTitle}">갤럭시 S10 한달 사용 후기</a>
+	                                    <a th:if="${rewardHist.rewardDetail.contentType == TYPE_REVIEW}" th:href="|javascript:moveReview(${rewardHist.rewardDetail.contentId})|" th:text="${rewardHist.contentTitle}">갤럭시 S10 한달 사용 후기</a>
+	                                    <a th:if="${rewardHist.rewardDetail.contentType == TYPE_EXT_REVIEW}" th:href="|javascript:moveExtReview(${rewardHist.rewardDetail.contentId})|" th:text="${rewardHist.contentTitle}">갤럭시 S10 한달 사용 후기</a>
+	                                    <a th:if="${rewardHist.rewardDetail.contentType == TYPE_COMPARE}" th:href="|javascript:moveCompare(${rewardHist.rewardDetail.contentId})|" th:text="${rewardHist.contentTitle}">갤럭시 S10 한달 사용 후기</a>
+                                    </p>
+                                    <p class="detail detail_plus" th:if="${rewardHist.tokenType == 0}"><strong>REVU</strong>
+                                    	<th:block th:if="${rewardHist.rewardType == 0}" th:text="|+${rewardHist.rewardInfo.revu}|"></th:block>
+                                    	<th:block th:if="${rewardHist.rewardType == 1}" th:text="|-${rewardHist.rewardInfo.revu}|"></th:block>
+                                    </p>
+                                    <p class="detail detail_plus" th:if="${rewardHist.tokenType == 1}"><strong>RENA</strong>
+                                    	<th:block th:if="${rewardHist.rewardType == 0}" th:text="|+${rewardHist.rewardInfo.rena}|"></th:block>
+                                    	<th:block th:if="${rewardHist.rewardType == 1}" th:text="|-${rewardHist.rewardInfo.rena}|"></th:block>
+                                    </p>
+                                </div>
+                            </div>
+                        </li>
+                    </th:block>
+                    </ul>  
+
+                </div>
+
+            </div>
+            
+        </div>
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

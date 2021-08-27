@@ -1,0 +1,748 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org" style="overflow:scroll">
+<th:block th:replace="/common/head.html"></th:block>  
+<!-- Link Swiper's CSS -->
+<link rel="stylesheet" type="text/css" th:href="@{/css/swiper.min.css}">
+<script type="text/javascript" th:src="@{/js/tom.search.autocomplate.js}"></script>
+<script th:inline="javascript">
+    
+    var imgPrefix = /*[[ ${imagePrefix} ]]*/;
+	var msgBtnPick = /*[[ #{btn.pick} ]]*/;	
+	
+	// 필터 메시지
+	var msgDuplicatedKeyword = /*[[ #{info.duplicate.keyword} ]]*/;
+	var msgOnlyNum = /*[[ #{req.only_number} ]]*/;
+	
+	var recentKeywordsStr = /*[[ ${recentKeywords} ]]*/;
+	var recentKeywords = [];
+	if(recentKeywordsStr != null) {
+		recentKeywords = JSON.parse(recentKeywordsStr);
+	}
+	
+</script>
+<script>
+
+	var sessionInfo = null;
+	var categId;
+	var categoryData;
+	var contentData;
+	var uiDataIdx = 0;
+	var moreJobResult = true;
+	var nowPage = 0;
+	var perPage = 10;
+	var compareArr = new Array();
+	var moreState = false;
+	var isCateg = true;
+	
+	const COMPARE_LIMIT = 2;
+	
+	var currentViewType = VIEW_CARD_TYPE;
+	var currentSorting  = SORT_RATING;
+	var currentPage     = null;
+	var currentScroll   = null;
+
+	
+	var contextPath = $('#contextPathHolder').attr('data-contextPath') ? $('#contextPathHolder').attr('data-contextPath') : '';
+	
+	
+	$(document).ready(function() {
+		//log("[cate_list.html]");
+		let pageStatus = getPageStatusJson();
+		
+		printRecentKeyword();
+		
+		initFilterUiprint(pageStatus);
+		initFilterEvents();
+		initUiprint(pageStatus);
+		initEvents();				
+	});
+	
+	
+	function initEvents(uiState) {
+		
+		$('#orderType').change(function() {
+			currentSorting = $(this).val();
+			if(categId != null) {
+				moreState = false;
+				getContentList(categId, 1);
+			}
+		});
+		
+		$('#closeCompare').click(function() {
+			$('#compare_layer').hide();
+		});		
+		
+		jQuery(window).scroll(function() {
+			//log("scrollTop:"+jQuery(window).scrollTop() + "/height:" + (jQuery(document).height() - jQuery(window).height()));
+			//log("content size:"+contentData.length);
+			if ((jQuery(window).scrollTop()+100) >= jQuery(document).height() - jQuery(window).height()) {
+				if(moreJobResult && contentData.length < 100) {
+		    		getContentList(categId, nowPage+1);
+		    	}
+			}
+		});	
+	}
+
+	function initUiprint(uiState) {
+		
+		log("[cate_list][initUiprint]", 0);
+					
+		if(uiState['categId'] != null) {
+			categId = uiState['categId'];
+		} else {
+			categId = null;
+		}
+		
+		if(uiState != null) {			// 이전 정보가 있다면 세팅
+	    				
+			if(uiState['currentViewType'] != null)
+				currentViewType = uiState['currentViewType'];
+	    	
+			if(uiState['currentSorting'] != null)		
+				currentSorting = uiState['currentSorting'];
+	    	
+			if(uiState['currentScroll'] != null)
+				currentScroll = uiState['currentScroll'];
+	    	
+			if(uiState['categId'] != null)
+				categId	= uiState['categId'];	
+				
+			if(uiState['currentPage'] != null) {
+				nowPage	= uiState['currentPage'];
+			} else {
+				nowPage = 1;
+			}
+			
+			log("[nowPage]:"+nowPage);
+			
+			if(uiState['filter'] != null)
+				filter	= uiState['filter'];
+	    	
+			$("#orderType").val(currentSorting);
+			
+		} else {						// 정보가 없을때의 초기화
+			
+		}
+		
+		
+		moreState = false;
+		getCategoryList(categId);	
+		getContentList(categId, nowPage, true);
+		
+		$("#a_view_type").removeClass();
+		$("#ul_search_list").removeClass();
+		if(currentViewType == VIEW_CARD_TYPE) {
+			$("#a_view_type").addClass("vf_type_card");
+			$("#ul_search_list").addClass("list_type_card");
+		} else {
+			$("#a_view_type").addClass("vf_type_flat");
+			$("#ul_search_list").addClass("list_type_flat");
+		}
+		
+    }
+	
+	var isPressedBackKey = false;
+	window.onpopstate = function(event) {
+				
+		isPressedBackKey = true;
+	    if(event.state != null) {
+	    	initUiprint(event.state);
+	    }
+	    
+	};
+	
+	function getCategoryList(categId) {
+		
+		var url = prefix + "/api/category/category_list.do?status=0";
+		$.ajax({
+	        url: url,
+	        type:'get',
+	        success:function(data){
+	        	categoryData = null;
+	        	categoryData = data['list'];
+	        		        	
+	        	if(categId != null) {
+	        		var seqArr = seperateSortSeq(categId);
+	        		setLv1Select(seqArr[0], seqArr[0]+seqArr[1], seqArr[0]+seqArr[1]+seqArr[2]);
+	        	} else {
+	        		setLv1Select(null, null, null);
+	        	}
+	        	
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+
+	function setLv1Select(level1Id, level2Id, level3Id) {
+		//log("[setLv1Select()]"+level1Id);
+		$('#categLevel1').empty();
+				
+		for(var i=0; i<categoryData.length; i++) {
+						
+			var categId = categoryData[i]['categ_id'];
+			var categLv = categoryData[i]['level'];
+			var categName = categoryData[i]['categ_name'];
+			
+			// level1이면 리스트에 추가 
+			if(categId.indexOf(level1Id, 0) == 0 && categLv == 1) {
+				$('#categLevel1').html(categName);
+			}
+		}		
+		setLv2Select(level1Id, level2Id, level3Id);		
+	}	
+	
+	function setLv2Select(level1Id, level2Id, level3Id) {
+		
+		//log("[setLv2Select()]"+level1Id + "/" + level2Id);
+		
+		$('#categLevel2').empty();		
+		
+		for(var i=0; i<categoryData.length; i++) {
+			
+			var categId = categoryData[i]['categ_id'];
+			var categLv = categoryData[i]['level'];
+			var categName = categoryData[i]['categ_name'];
+						
+			if( categId.indexOf(level2Id, 0) == 0 && categLv == 2 ) {
+				$('#categLevel2').html(categName);
+			}
+		}
+		
+		setLv3Select(level1Id, level2Id, level3Id);
+		
+	}
+	
+	
+	function setLv3Select(level1Id, level2Id, level3Id) {
+		
+		$('#categLevel3').empty();
+				
+		for(var i=0; i<categoryData.length; i++) {
+			
+			var categId = categoryData[i]['categ_id'];
+			var categLv = categoryData[i]['level'];
+			var categName = categoryData[i]['categ_name'];
+			
+			if( categId.indexOf(level3Id, 0) == 0 && categLv == 3 ) {
+				$('#categLevel3').html(categName);				
+			}	
+		}
+	}
+	
+	function seperateSortSeq(seq) {
+		
+		var arr = new Array();
+		var startIndex = 0;
+		var arrIndex = 0;
+		
+		for(var i=1; i<=seq.length; i++) {
+			if(i%2==0) {
+				var tmp = seq.substring(startIndex,i);
+				arr[arrIndex] = tmp;
+				startIndex = i;
+				arrIndex++;
+			}
+		}		
+		return arr;
+		
+	}
+	
+	function filterOkBtn() {
+		getContentList(categId, 1);
+	}
+	
+	function getContentList(categId, page, isInit) {
+		
+		//log("getContentList() :: ["+categId+"]");
+		log("getContentList["+categId+"] ["+page+"]["+isInit+"]");
+
+		if(page == 1) {
+			nowPage = 1;
+			contentData = null;
+			uiDataIdx = 0;
+		} 
+		
+		
+		
+		let urlParam = 'paging.nowPage=' + nowPage +
+		'&categId=' + categId +
+    	'&orderby.field=' + currentSorting +
+    	'&orderby.sorting=desc' +
+    	'&paging.perPage=10';
+		
+		if(isInit) {
+			urlParam = 'paging.nowPage=1' + 
+			'&categId=' + categId +
+	    	'&orderby.field=' + currentSorting +
+	    	'&orderby.sorting=desc' +
+	    	'&paging.perPage='+(nowPage * 10);
+		}
+		
+		// 필터에 대한 파라미터 설정
+		let filterParam = getFilterParam();
+		urlParam = urlParam + filterParam;
+		
+		let paramMap = queryStringToMap(urlParam);
+		
+		if(isInit) {
+			$("#firstSTarget").val("prod");	
+		}
+		
+		paramMap['sTarget'] = $("#firstSTarget").val();
+		urlParam = mapToQueryString(paramMap);
+
+		log("[URL PARAM]:"+urlParam+filterParam);
+    	
+		// URL 변경
+    	let url = prefix + '/api/search/aggregate_search.do?' + urlParam;
+		log("URL :: ["+url+"]");
+		
+		$.ajax({
+	        url: url,
+	        type:'get',
+	        success:function(data){
+	        	log(data);
+	        	if(data['state'] == 0) {    
+	        		
+	        		if(isPressedBackKey == false) {
+	        			
+	        			if(nowPage == 1) {
+		        			addHistState();
+		        		}
+	        					        		
+		        	} else {
+		        		isPressedBackKey = false;
+		        	}
+	        		
+	        		let size = data['list'].length;
+		        	if(size == 0 || size < perPage) {
+		        		moreJobResult = false;
+		        	} else {
+		        		moreJobResult = true;
+		        	}
+		        	
+		        	var len;
+	        		if(contentData != null) {
+	        			len = contentData.length;
+	        			contentData = contentData.concat(data['list']);  
+	        		} else {
+	        			len = 0;
+	        			contentData = data['list'];
+	        		}
+		        	
+		        	if(size > 0) {
+		        		nowPage++;
+		        	}
+	       
+		        	
+		        	printContents(page, data['list'], isInit);		        	
+	         		 		         		
+	        			        		
+	    		} else {
+	    			alert(getErrorMsg(data['state']));
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+		
+	}
+	
+	function printContents(page, list, isInit) {	
+		
+		if(page == 1) {
+			if(list.length > 0) {
+				$("#ul_search_list").empty();
+				$("#ul_search_list").css("display", "");
+			} else {
+				$("#ul_search_list").css("display", "none");
+			}	
+		}
+		
+		let liList = makeContentLiList(list, currentViewType, isCateg, uiDataIdx);
+		$("#ul_search_list").append(liList);
+		
+		uiDataIdx = contentData.length;
+		
+		if(isInit != null && isInit == true){
+			$('html, body').animate({scrollTop : currentScroll}, 200);	
+		}		
+				
+		// 더보기 버튼
+		$("#div_content_more").empty();
+		if(list != 0) {
+			if(contentData.length >= 100) {
+				let nextPage = nowPage + 1;
+				$("#div_content_more").append('<a href="javascript:getContentList(\''+categId+'\','+nextPage+')" class="list_more">더보기</a>');	
+			}			
+		}
+	}
+	
+	
+	/*
+		제품 비교 관련 메소드
+	*/
+	
+	function pushCompareTab(checkBox, prodIdx) {
+						
+		$('#compare_layer').show();
+				
+		let prodId = contentData[prodIdx]['prod']['prod_id'];
+		
+		let isDuplication = removeCompareItemByIdx(prodId);
+		
+		if(isDuplication) {
+			return;
+		}
+		
+		
+		if(compareArr.length == COMPARE_LIMIT) {
+			showAlert('가득찼습니다!');
+			checkBox.checked = false;
+			return;
+		}
+	
+		compareArr[compareArr.length] = contentData[prodIdx];
+		var item = makeCompareItem(contentData[prodIdx]);
+		$('#compare_item_list').append(item);
+	}
+	
+
+	function removeCompareItemBtn() {		
+		
+		$("input[name=compare_item]:checked").each(function() {
+			  let id = $(this).attr('id').split('_'); 
+
+			  console.log("벨류값확인 : " + id);
+			  
+			  removeCompareItemByIdx(id[2]);
+
+		});
+						
+	}	
+	
+	function removeCompareItemByIdx(prodId) {
+		
+		for(var i=0; i<compareArr.length; i++) {	
+			
+			//log(prodId + "/" + compareArr[i]['prod']['prod_id']);
+			
+			if(compareArr[i]['prod']['prod_id'] == prodId) {
+				
+				// 비교 레이아웃의 아이템 제거 
+				$('#compare_li_'+prodId).remove();
+				// 제품 리스트의 체크 해제 
+				$('#compare_'+prodId).prop('checked', false);
+				// 데이터 제거 
+				compareArr.splice(i, 1);
+				
+				if(compareArr.length == 0)
+					$('#compare_layer').hide();	
+				
+				
+				return true;
+			} 
+		}
+	}
+	
+	function moveToCompare() {
+	
+		var prodIds = new Array();
+				
+		for(var i=0; i<compareArr.length; i++) {
+			prodIds.push(compareArr[i]['prod']['prod_id']);
+		}
+		
+		let urlParam = 'categId=' + compareArr[0]['prod']['categ_id'] +
+					   '&prodIds=' + prodIds;
+		
+		urlParam = encodeURI(urlParam);
+		log(urlParam);	
+			
+		location.href = "prod/cate_compare.do?"+urlParam;
+	}
+	
+	function moveProd(prodId) {
+		addHistState();
+		location.href = prefix + '/m/prod/product.do?prod_id=' + prodId;
+	}
+	
+	function moveReview(reviewId) {
+		addHistState();
+		location.href = prefix + '/m/review/review.do?review_id=' + reviewId;
+	}
+	
+	function moveExtReview(relId) {
+		log("[moveToExt]:"+prefix + "/m/review/ext.do?rel_id="+relId);
+		addHistState();
+		window.open(prefix + "/m/review/ext.do?rel_id="+relId);
+	}
+	
+
+	
+	
+	function changeViewType() {
+		$("#ul_search_list").empty();
+		
+		$("#a_view_type").removeClass();
+		$("#ul_search_list").removeClass();
+		if(currentViewType == VIEW_CARD_TYPE) {
+			currentViewType = VIEW_FLAT_TYPE;
+			
+			$("#a_view_type").addClass("vf_type_flat");
+			$("#ul_search_list").addClass("list_type_flat");
+		} else {
+			currentViewType = VIEW_CARD_TYPE;
+			$("#a_view_type").addClass("vf_type_card");
+			$("#ul_search_list").addClass("list_type_card");
+		}
+		
+		getContentList(categId, 1);
+		
+	}
+	
+	
+	function showCompareLayer() {
+		$('#compare_layer').css('display', '');
+	}
+	
+	function hideCompareLayer() {
+		$('#compare_layer').css('display', 'none');
+	}
+	
+	function addHistState() {
+		let pageState = {
+				'currentViewType' : currentViewType,
+				'currentSorting'  : currentSorting,
+				'currentPage'     : nowPage,
+				'currentScroll'   : $(document).scrollTop(),
+				'categId'		  : categId,
+				'filter'		  : getFilterJson()
+		};
+		history.pushState(pageState, null, '#' + encodeURI(JSON.stringify(pageState)));	
+		log("[Add Category List State]:");
+		log(pageState);
+	}
+	
+	function getUrlParams() {
+	    var params = {};
+	    window.location.search.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(str, key, value) { params[key] = value; });
+	    return params;
+	} 
+
+	function removeFilter(removeField) {
+		//log("removeFilter ["+removeField+"]");
+		
+		if(removeField == 'price'){
+			gFilterInfo['minPrice'] = null;
+			gFilterInfo['maxPrice'] = null;
+		} else {
+			gFilterInfo[removeField] = null;	
+		}
+		
+		printFilterUiFromData();
+		printFilterConditionToParentUi();
+		
+		getContentList(categId, 1, false);
+	}
+	
+	
+	/*
+	function enterkey() {
+		if (window.event.keyCode == 13) {
+ 			search();
+	    }
+	}
+	*/
+	
+	function search() {
+		let keyword = $("#keyword").val();
+		if(keyword == '') {
+			return;
+		}
+		
+		let pageState = {
+				'keyword' : keyword,
+				'currentViewType' : VIEW_CARD_TYPE,
+				'currentSorting'  : SORT_POPULARITY,
+				'currentPage'     : 1,
+				'currentScroll'   : 0
+		};
+		location.href='search/search.do#' + encodeURI(JSON.stringify(pageState));
+	}
+	
+	function resetInput(){
+		$("#keyword").val('');
+	}
+	
+	
+	
+</script>
+<body> 
+
+	<!-- 비교 레이어 -->
+    <div id="compare_layer"  class="wrap_box_compare" style="display: none;">
+        <div class="layer_close" onclick="hideCompareLayer()"><span class="layer_off"></span></div>
+        <div class="layer_box">
+            <p class="ch_tit" style="text-align:left;"><strong>제품</strong> 비교</p>
+            <!-- S:List Card -->
+            <ul id="compare_item_list" class="list_type_card" style="margin:10px 0 -20px 0;">
+                
+            </ul>
+            <p style="text-align:center;font-size:.7rem;margin:12px 0 -15px 0;">모바일에서는 제품 비교를 2개까지 가능합니다.</p>
+        </div>
+        <div class="btn">
+            <a href="javascript:removeCompareItemBtn()" class="btn_type_bg btn_type_gray_none_fill">선택삭제</a>
+            <a href="javascript:moveToCompare()" class="btn_type_bg btn_type_orange_fill layer_off">비교</a>
+        </div>
+    </div>
+       
+
+	<th:block th:replace="/category/cate_filter.html"></th:block>
+
+    <div id="page" class="wrap_total">
+
+		<div id="div_keyword_input" class="head_wrap">
+            <a href="javascript:goBack();" class="btn_back"></a>
+            <div class="search_wrap">
+                <input id="keyword" type="text" class="search_input input_type" onkeyup="enterkey();">
+                <a href="javascript:resetInput()" class="btn_reset"></a>
+                <a href="javascript:search(1, null, null, true)" class="btn_search"></a>
+            </div>
+        </div>
+        
+        <!-- 
+        <div class="head_wrap">
+            <a th:href="@{/m/home.do}" class="btn_back"></a>
+            <div class="search_wrap">
+                <input id="keyword" type="text" class="search_input input_type" onkeyup="enterkey();">
+                <a href="javascript:resetInput()" class="btn_reset"></a>
+                <a href="javascript:search()" class="btn_search"></a>
+            </div>
+        </div>
+		-->
+		
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <!-- S:Category -->
+                <div class="wrap_cate_line">
+                    <span id="categLevel1"></span>
+                    <em></em>
+                    <span id="categLevel2"></span>
+                    <em></em>
+                    <span id="categLevel3"></span>
+                </div>
+
+                <div class="wrap_content_padding">
+                
+                    <ul id="ul_word_suggest" class="ser_key_history" style="margin-top:10px; display: none" >           
+                    </ul>
+                
+                    
+                    <div id="div_recent_search_words" style="display: none">
+                    	<div class="ser_key_cont">
+	                        <span class="latest"><em class="title_deco"></em>최근 검색어</span>
+	                        <a href="javascript:deleteRecentSearchWord()" class="alldel" >전체 삭제</a>
+	                    </div>
+	                    
+	                    <div id="div_no_recent_keywords" class="ser_key_none" style="display: none">
+	                        최근 검색어가 없습니다.
+	                    </div>
+	                    <ul id="ul_recent_keywords" class="ser_key_history">                
+	                    </ul>
+	               </div>
+	               
+                	<div id="div_pop_search_words" style="display: none">
+	                    <div style="border-top:1px solid #eee;margin:20px 0 10px 0;"></div>
+	                    <th:block th:if="${searchStatDto} != null">
+		                    <div class="ser_key_cont">
+		                        <span class="latest"><em class="title_deco"></em>인기 검색어</span>
+		                        <span class="period" th:text="${#dates.format(searchStatDto.statBegin, 'yyyy-MM-dd') + ' ~ ' + #dates.format(searchStatDto.statEnd, 'MM-dd')}"></span>
+		                    </div>
+	                    </th:block>
+	                    
+	                    
+	                    <ol class="ser_key_hot">
+	                    
+	                    	<th:block th:each="popKeyword: ${popularKeywords}">
+		                        <li>
+		                            <a th:href="'javascript:$(\'#keyword\').val(\''+${popKeyword.keyword}+'\');search(1);'">
+		                                <span class="ser_num" th:text="${popKeyword.rank}"></span>
+		                                <span class="ser_key" th:text="${popKeyword.keyword}">검색어</span>
+		                                <th:block th:if="${popKeyword.prevRank} == null">
+		                                	<span class="ser_updown ser_new">NEW</span>
+		                                </th:block>
+		                                <th:block th:if="${popKeyword.prevRank} != null and ${popKeyword.rank} == ${popKeyword.prevRank}">
+		                                	<span class="ser_updown ser_u">-</span>
+		                                </th:block>
+		                                <th:block th:if="${popKeyword.prevRank} != null and ${popKeyword.rank} > ${popKeyword.prevRank}">
+		                                	<span class="ser_updown ser_down"><em></em><span th:text="${T(Math).abs(popKeyword.rank - popKeyword.prevRank)}"></span></span>
+		                                </th:block>
+		                                
+		                                <th:block th:if="${popKeyword.prevRank} != null and ${popKeyword.rank} < ${popKeyword.prevRank}">
+		                                	<span class="ser_updown ser_up"><em></em><span th:text="${T(Math).abs(popKeyword.rank - popKeyword.prevRank)}"></span></span>
+		                                </th:block>
+		                            </a>
+		                        </li>
+	                        </th:block>
+	                    </ol>
+                    </div>
+                    
+                    
+                    <div id="div_search_result" style="display: block">
+						<!-- S:View Filter -->
+	                    <div class="wrap_viewfilter">
+	
+	                        <div class="viewfilter_filter">
+	                            <a href="javascript:showFilterPage()" class="vf_type_filter"></a>
+	                        </div>      
+	                        
+	                        <select id="firstSTarget" onchange="getContentList(categId, 1, false)" >
+		                    	<option value="prod">제품</option>
+		                    	<option value="review">리뷰</option>
+		                    </select>
+		                                         
+	
+	                        <div class="viewfilter_type">
+	                            <a id="a_view_type" href="javascript:changeViewType()" class="vf_type_card"></a>
+	                        </div>
+	                        <div class="viewfilter_sort">
+	                            <select id="orderType" class="input_type_none">
+	                                <option value="latest" th:text="#{common.orderby_lately}">최신순</option>
+	                                <option value="popularity" th:text="#{common.orderby_popularity}">인기순</option>
+	                                <option value="rating" th:text="#{common.orderby_evalue}">평점순</option>
+	                            </select>
+	                        </div>
+	
+	                    </div>
+	                    
+	                    <!-- S:Filter Option List -->
+	                    <div id="div_filter_list" class="fil_cond">
+	              		</div>
+	
+	                    <!-- S:Contents List -->
+	                    <ul id="ul_search_list" class="list_type_card">
+	                    </ul>
+	
+	                    <div id="div_content_more">
+							<!-- <a href="" class="list_more">더보기 +</a> -->
+						</div> 
+                    </div>
+                    
+
+                </div>
+            </div>
+            
+        </div>
+        <!-- bottom_menu -->
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<script th:inline="javascript">
+	var channelInfo = /*[[${channelInfo}]]*/
+	$(document).ready(function(){
+		log(channelInfo);
+		
+		if(channelInfo['tags'] != null){
+			printTags(channelInfo['tags']);
+		}
+		
+	})
+	
+	function printTags(tagString){
+		let tagArr = JSON.parse(tagString);
+		let jsonToString = "";
+		for(let index in tagArr){
+			jsonToString += '#'+tagArr[index]+' ';
+		}
+		$("#ch_tags").val(jsonToString);
+	}
+	function modifyChannel(){
+		let modifyInfo = {
+				channel_id : channelInfo['channelId'],
+				ch_name : $("#ch_title").val(),
+				ch_status : $("#ch_status").val()
+		}
+		if($("#ch_desc").val() != "") {
+			modifyInfo['ch_desc'] = $("#ch_desc").val();
+		}
+		
+		if($("#ch_tags").val() != "") {
+			let tags = $("#ch_tags").val();
+			if(tags.indexOf("#") == -1){
+				alert(/*[[#{req.input.divide_tag}]]*/);
+				return;
+			}
+			modifyInfo['tags'] = $("#ch_tags").val();
+		}
+		
+		
+		log(modifyInfo);
+		
+		if(modifyInfo['ch_name']==""){
+			alert(/*[[#{req.input.channel_name}]]*/);
+			return;
+		}
+		
+		let url = prefix +"/api/channel/modify_channel.do";
+		log(url);
+		
+		let reqData = JSON.stringify(modifyInfo);
+		
+		$.ajax({
+			url:url,
+			type:"post",
+			data:reqData,
+			contentType:"application/json",
+			success:function(data){
+				log(data);
+				if(data['error_message'] == null){
+					alert(/*[[#{res.complete.modify_channel}]]*/);
+					location.href = prefix+"/m/channel/channel.do";
+		    		
+	        	} else {
+	    			alert(getErrorMsg(data['state']));
+	    		}
+			},
+			error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+		})
+		
+	}
+</script>
+<body>    
+
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a href="javascript:goPrePage()" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail" th:text="#{channel.setting}">채널 설정</h1>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <div class="wrap_log">
+
+                    <div class="wrap_account">
+                        <div class="wrap_input">
+                            <input id="ch_title" type="text" class="input_type_n" th:placeholder="#{channel.title}" th:value="${channelInfo.chName}">
+                        </div>
+                    </div>
+
+                    <div class="wrap_textarea" >
+                        <textarea id="ch_desc" th:placeholder="|#{channel.explain} (#{common.limit.word(300)})|" th:text="${channelInfo.chDesc != null} ? ${channelInfo.chDesc} : ''"></textarea>
+                    </div>
+
+                    <div class="wrap_account">
+                        <div class="wrap_input">
+                            <input id="ch_tags" type="text" class="input_type_n" placeholder="#채널 태그">
+                            <p class="ch_tag" th:text="#{channel.introduce.channel_tag}">채널 태그는 검색 결과에 우선 반영됩니다.</p>
+                        </div>
+                    </div>
+
+                    <div class="wrap_account">
+
+                        <div class="wrap_input">
+                            <select id="ch_status" class="i_select_n i_select_ac" th:field="*{channelInfo.chStatus}">
+                                <option th:value = 1 th:text="#{channel.option.open}">채널 공개</option>
+                                <option th:value = 0 th:text="#{channel.option.unopen}">채널 비공개</option>
+                            </select>
+                        </div>                        
+
+                    </div>
+
+                </div>
+
+                <div class="btn">
+                    <a href="javascript:goPrePage()" class="btn_type_bg btn_type_gray_none_fill" th:text="#{btn.close}">취소</a>
+                    <a href="javascript:modifyChannel()" class="btn_type_bg btn_type_orange_fill" th:text="#{btn.ok}">확인</a>
+                </div>
+
+            </div>
+            
+        </div>
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+	<!-- js -->
+	<script type="text/javascript" th:src="@{/js/jquery-3.3.1.min.js}"></script>
+	<script type="text/javascript" th:src="@{/js/jquery-ui.js}"></script>
+	<!-- css -->
+	<link rel="stylesheet" type="text/css" th:href="@{/css/tom.css}">
+	
+	<link id="contextPathHolder" th:data-contextPath="${#httpServletRequest.getContextPath()}"/>
+</head>
+<script type="text/javascript">
+</script>
+<body>    
+
+    <div id="page" class="wrap_total">
+
+        <div class="content">
+
+            <div class="wrap_main_ser" style="padding:100px 0 0 0;margin-bottom:-100px;">
+                <h1>세상의 모든 리뷰</h1>
+                <img th:src="@{/image/bi_main.png}" class="bi_main" alt="REVUNARA">
+            </div>
+
+            <div class="wrap_content">
+
+                <div class="wrap_log">
+
+                    <div class="wrap_account">
+                        <div class="wrap_sbody">
+                            <h2 style="font-size:2.6rem">페이지를 찾을 수 없습니다.<p style="font-size:1.4rem;padding-top:10px;color:#aaa;"></p></h2>
+                            <p class="ment">
+                            요청하신 페이지를 찾을 수 없습니다.<br> 삭제된 주소이거나 일시적으로 사용할 수 없습니다.<br>
+                            입력하신 페이지의 주소가 정확한지 다시 한번 확인해 주시기 바랍니다.
+                            </p>
+                        </div>
+                        <div class="btn_box">
+                            <a th:href="@{/m/home.do}" class="btn_type_bg btn_type_gray_none_fill">메인 화면</a>
+                            <a href="javascript:history.back()" class="btn_type_bg btn_type_orange_fill">뒤로 가기</a>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+            
+        </div>
+
+        <div class="copyright">
+            © Copyright 2018 TechonMedia Inc. <a href="" class="more">More</a><br>
+            <a href="" class="more">서비스이용약관</a><em>|</em>
+            <a href="" class="more">개인정보보호정책</a>
+        </div>
+
+        <div class="bottom_wrap" style="display:none;">
+            <ul class="bottom_btn">
+                <li><a href=""><span class="btn_prev"></span></a></li>
+                <li><a href=""><span class="btn_next"></span></a></li>
+                <li><a href=""><span class="btn_home"></span></a></li>
+                <li><a href=""><span class="btn_reload"></span></a></li>
+                <li><span class="btn_top"></span></li>
+            </ul>
+        </div>
+    </div>
+
+</body>
+
+</html>

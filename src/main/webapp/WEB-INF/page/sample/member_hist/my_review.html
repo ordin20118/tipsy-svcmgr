@@ -1,0 +1,243 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<script th:inline="javascript">
+
+
+	let filterType = null;
+	let sortType = SORT_TYPE_DESC;
+	let moreJobResult = true;
+	let currentPage = 1;
+	let dataCnt = /*[[${histSize}]]*/;
+	$(document).ready(function(){
+		
+		jQuery(window).scroll(function() {
+			if (jQuery(window).scrollTop() >= jQuery(document).height() - jQuery(window).height()) {
+				if(moreJobResult && dataCnt < 100) {
+					getReviewHist(currentPage+1, 20);
+		    	}
+			}
+		});	
+	})
+
+	
+	function getReviewHist(nowPage, perPage){
+		let urlParam = 'paging.nowPage=' +nowPage +
+  		'&paging.perPage=' + perPage +
+  		'&orderby.field=reg_date' +
+  		'&orderby.sorting='+sortType;
+  		if(filterType != null){
+  			urlParam += '&filterType='+filterType;
+  		}
+  		
+		let reqUrl = prefix +'/api/member_info/get_review_hist.do?'+urlParam;
+		
+		$.ajax({
+	        url: reqUrl,
+	        type:'get',
+	        success:function(data){
+	        	log(data);
+	        	if(data['state'] == STATE_SUCCESS){
+	        		currentPage = nowPage;
+	        		printReviewHistory(data['list']);
+	        	} else{
+	        		alertErrorMessage(data['error_message']);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	function printReviewHistory(list){
+		let appendLi = makeReviewAppendLi(list);
+		
+		$("#ul_review_history").append(appendLi);
+		
+		dataCnt += list.length;
+		if(list.length < 20){
+			moreJobResult = false;
+		}
+	}
+	
+	function makeReviewAppendLi(list){
+		let appendLi = "";
+		if(list.length > 0){
+			for(let i=0; i<list.length; i++){
+				appendLi += makeMyReviewLi(list[i]);
+			}
+		}
+		return appendLi;
+	}
+	
+	
+	function makeMyReviewLi(data){
+		let reviewInfo = data['review'];
+		let likeStat = data['like_stat'];
+		
+		let regDate = "-";
+		if(reviewInfo['reg_date'] != null){
+			regDate = moment(reviewInfo['reg_date']).format('YYYY.MM.DD HH:mm');
+		}
+		
+		let cTypeName = getReviewContentTypeName(reviewInfo['rcontent_type']);
+		let wordSymp = /*[[#{review.sympathy}]]*/;
+		let wordSelectNum = /*[[#{common.count.select}]]*/;
+		let wordPick = /*[[#{common.pick}]]*/;
+		
+		let appendLi =	'<li>'+
+						'   <div class="tl_type1">'+
+						'       <div class="s_plusminus s_plus">&middot;</div>'+
+						'       <div class="cont">'+
+						'           <p class="time">'+regDate+'</p>'+
+						'           <p class="title"><a href="javascript:moveReview('+reviewInfo['review_id']+')"><span class="type1">'+cTypeName+'</span>'+reviewInfo['title']+'</a></p>'+
+						'           <p class="data">'+
+						'               <span><strong>'+wordSymp+'</strong><em class="agr"></em>'+likeStat['like_count']+'<em>|</em></span>'+
+						'               <span><strong>'+wordSelectNum+'</strong>'+reviewInfo['view_count']+'<em>|</em></span>'+
+						'               <span><strong>'+wordPick+'</strong>'+data['pick_count']+'</span>'+
+						'           </p>'+
+						'       </div>'+
+						'   </div>'+
+						'</li>';
+                        
+         return appendLi;
+	}    
+	
+	function getReviewContentTypeName(rContentType){
+		let name = /*[[#{filter.review.detail.unbox}]]*/;
+		if(rContentType == '10'){
+			name = /*[[#{filter.review.detail.unbox}]]*/;
+		} else if(rContentType == '100'){
+			name = /*[[#{filter.review.detail.install}]]*/;
+		} else if(rContentType == '1000'){
+			name = /*[[#{filter.review.detail.use}]]*/;
+		} else if(rContentType == '10000'){
+			name = /*[[#{filter.review.detail.test}]]*/;
+		} else if(rContentType == '100000'){
+			name = /*[[#{filter.review.detail.compare}]]*/;
+		} else {
+			name = /*[[#{filter.review.detail.etc}]]*/;
+		} 
+		
+		return name;
+	}
+	
+	function changeFilterType(){
+		log($("#sel_filter_type").val());
+		if($("#sel_filter_type").val() == 0){
+			filterType = null;
+		} else {
+			filterType = $("#ul_review_history").val();
+		}
+		contentClear()
+		getReviewHist(1, 20);
+	}
+	
+	function changeSortType(){
+		log($("#sel_sort_type").val());
+		sortType = $("#sel_sort_type").val();
+		contentClear();
+		getReviewHist(1, 20);
+	}
+	
+	function contentClear(){
+		$("#ul_review_history").empty()
+	}
+</script>
+<body>    
+
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a th:href="@{/m/channel/channel.do}" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail" th:text="#{member.review_write_hist}">리뷰 작성 내역</h1>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <div class="bg_gray">
+
+                    <div class="wrap_content_padding" style="margin-bottom:0;">
+                        
+                        <div class="wrap_myinfo">
+
+                            <ul class="mydata_now0">
+                                <li>
+                                    <a>
+                                        <span class="tit" th:text="#{filter.content.review}">리뷰</span>
+                                        <p class="num" th:text="${reviewCnt}">250</p>
+                                    </a>
+                                </li>
+                            </ul>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="wrap_content_padding" style="margin-top:10px;">
+
+                    <!-- S:View Filter -->
+                    <div class="wrap_viewfilter">
+
+                        <div class="viewfilter_filter">
+                            <select id="sel_filter_type" class="input_type_none" onchange="changeFilterType()">
+                                <option value = 0 th:text="#{filter.option.all_view}">전체보기</option>
+                                <option th:text="#{filter.option.review_view}">리뷰보기</option>
+                                <option th:text="#{filter.option.short_review_view}">Short보기</option>
+                                <option th:text="#{filter.option.curation_review_view}">Curation보기</option>
+                            </select>
+                        </div>                          
+
+                        <div class="viewfilter_sort">
+                            <select id="sel_sort_type" class="input_type_none" onchange="changeSortType()" >
+                               	<option value = "desc" th:text="#{common.orderby_lately}">최신순</option>
+                                <option value = "asc" th:text="#{common.orderby_firstly}">처음순</option>
+                            </select>
+                        </div>
+                    </div>
+                    <ul id="ul_review_history" class="timeline_wrap" th:if="${histSize > 0}">
+                    <th:block th:each="reviewHist : ${reviewHist}">
+                    	<li>
+                            <div class="tl_type1">
+                                <div class="s_plusminus s_plus">&middot;</div>
+                                <div class="cont">
+                                    <p class="time" th:text="${#calendars.format(reviewHist.review.regDate,'YYYY.MM.dd HH:mm')}">2020.10.10 14:34</p>
+                                    <p class="title">
+                                    <th:block th:switch="__${reviewHist.review.rcontentType}__">
+                                    	<span class="type1" th:case="10"	 th:text="#{filter.review.detail.unbox}">개봉기</span>
+                                    	<span class="type1" th:case="100"	 th:text="#{filter.review.detail.install}">설치기</span>
+                                    	<span class="type1" th:case="1000"	 th:text="#{filter.review.detail.use}">사용기</span>
+                                    	<span class="type1" th:case="10000"	 th:text="#{filter.review.detail.test}">테스트</span>
+                                    	<span class="type1" th:case="100000" th:text="#{filter.review.detail.compare}">비교</span>
+                                    	<span class="type1" th:case="*" th:text="#{filter.review.detail.etc}">기타</span>
+                                    </th:block>
+                                    <a th:href="|javascript:moveReview(${reviewHist.review.reviewId})|" th:text="${reviewHist.review.title}">리뷰 타이틀 자리</a></p>
+                                    <p class="data">
+                                        <span><strong th:text="#{review.sympathy}">공감</strong><em class="agr"></em><th:block th:text="${reviewHist.likeStat.likeCount}">0</th:block><em>|</em></span>
+                                        <span><strong th:text="#{common.count.select}">조회수</strong><th:block th:text="${reviewHist.review.viewCount}">0</th:block><em>|</em></span>
+                                        <span><strong th:text="#{common.pick}">찜</strong><th:block th:text="${reviewHist.pickCount}">0</th:block></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </li>
+                    </th:block>
+                    </ul>  
+
+                </div>
+
+            </div>
+            
+        </div>
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

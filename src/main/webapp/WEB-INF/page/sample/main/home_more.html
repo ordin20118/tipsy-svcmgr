@@ -1,0 +1,131 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<script th:inline="javascript">
+
+
+	$(document).ready(function() {
+		search(1);	
+		scrollAndAutoMore();
+	});
+
+	function scrollAndAutoMore() {
+		log("REGISTER scrollAndAutoMore");
+		jQuery(window).scroll(function() {
+			if ((jQuery(window).scrollTop()+100) >= jQuery(document).height() - jQuery(window).height()) {
+				if(currentPage != null) {
+					log("CALL End Of Windows  SearchPage("+(currentPage+1)+")")
+					search(currentPage+1, null);
+				}
+			}
+		});
+	}
+	
+	
+	let moreType = /*[[${moreType}]]*/;
+	
+	let currentPage = 1;
+	function search(nowPage, isInit) {
+		log("searchMore ["+nowPage+"]["+isInit+"]");
+		currentPage = nowPage;
+		
+		
+		currentPage = nowPage;
+		let urlParam = 'paging.nowPage=' + nowPage + 
+		'&moreType=' + moreType +
+    	'&paging.perPage=10' +
+    	'';
+		
+		
+    	let url = prefix + '/api/home/get_content_more.do?' + urlParam;
+    	log("search URL : ["+url+"]");
+    	
+		$.ajax({
+	        url: url,
+	        type:'get',
+	        success:function(data){
+	        	log(data);
+	        	if(data['state'] == 0) {
+	        		printSearchResult(data, isInit);
+	        		
+	    		} else{
+	    			alert(getErrorMsg(data['state']));
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+		
+		$("#keyword").blur();
+	}
+	
+	
+	function printSearchResult(data, isInit) {
+		let sParam = data['sparam'];
+		let paging = sParam['paging'];
+		$("#contents_list").append(contentInfoListToLi(data['list']));
+	}
+	
+
+</script>
+
+
+<body>    
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a href="javascript:history.go(-1)" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail" th:text="${title}"></h1>
+                <div class="search_wrap_s">
+                    <a  class="btn_search"></a>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="wrap_content">
+				<div class="list_wrap">
+
+                    <div class="list_wrap_line">
+                        
+                    <div class="group_title">
+                        
+                        <div class="viewfilter_sort">
+                            <select class="input_type_none">
+                                <option th:text="#{common.orderby_evalue}">평점순</option>
+                                <option th:text="#{common.orderby_lately">최신순</option>
+                                <option th:text="#{common.orderby_popularity}">인기순</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- S:List Flat -->
+                    <ul id="contents_list" class="list_type_flat">       
+	                   
+	                                              
+                  	</ul>
+
+                    </div>
+
+                </div>
+                
+
+            </div>
+
+        </div>
+        <th:block th:replace="/common/footer.html"></th:block>
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+	<!-- third party js -->
+    <script th:src="@{/js/Chart.bundle.min.js}"></script>
+    <!-- third party js ends -->
+
+    <!-- demo app -->
+    <script th:src="@{/js/tom.chartjs_price_stat.js}"></script>
+    <!-- end demo js-->
+</body>
+
+</html>

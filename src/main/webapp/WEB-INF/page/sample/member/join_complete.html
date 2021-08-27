@@ -1,0 +1,53 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+
+<body>    
+
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a href="" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail" th:text="#{member.enroll2}">회원 가입</h1>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <div class="wrap_log">
+
+                    <div class="wrap_account">
+                        <div class="wrap_sbody">
+                            <h2><th:block th:text="#{common.site_name}">REVUNARA</th:block> <th:block th:text="#{member.enroll3}">회원가입이</th:block><br><th:block th:text="#{member.ment.complete}">완료되었습니다.</th:block></h2>
+                            <p class="ment"><th:block th:text="#{member.join.complete.sentence}"></th:block><br><th:block th:text="#{member.join.complete.sentence2}"></th:block><br><a th:href="@{/m/channel/channel.do}" th:text="#{member.mypage}">마이페이지</a><th:block th:text="#{member.join.complete.sentence3}"></th:block></p>
+                        </div>
+                        <ul class="reward_now1">
+                            <li>
+                                <a href="">
+                                    <span class="tit" th:text="#{member.join.point}">회원 가입 축하 포인트</span>
+                                    <p class="num">250 RENA</p>
+                                </a>
+                            </li>
+                        </ul>
+                        <div class="wrap_oauth">
+                            <a th:href="@{/}" class="btn_log auth_m" th:text="#{btn.ok}">확인</a>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+            
+        </div>
+
+        <th:block th:replace="/common/footer.html"></th:block>
+
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

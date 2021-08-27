@@ -1,0 +1,273 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<head>
+	<meta property="og:title" th:content="${title}">
+	<meta property="og:description" content="다음 제품들을 비교해보세요.">
+	<meta property="og:image" th:content="@{/image/ico/ms-icon-310x310.png}">
+</head>
+<!-- Link Swiper's CSS -->
+<link rel="stylesheet" type="text/css" th:href="@{/css/swiper.min.css}">
+<script type="text/JavaScript" src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+<script th:inline="javascript">
+	var kakaoKey = /*[[ ${kakaoKey} ]]*/;
+	
+	var gCompareTitle = /*[[ ${title} ]]*/;
+	var gCompareImage = prefix + '/image/ico/ms-icon-310x310.png';
+	
+	$(document).ready(function() {
+		Kakao.init(kakaoKey);
+		
+		let pageStatus = getPageStatusJson();
+		console.log("[pageStatus]");
+
+		setShareInfo()
+	});
+
+	function showOption(){
+		if($("#div_option").css("display") == "none"){
+			$("#div_option").css("display","");
+		}else{
+			$("#div_option").css("display","none");
+		}		
+	}
+	
+	function showShareLayer(){
+		log("[showShareLayer()]", 0);
+		$("#div_share_layer").css("display","");
+	}
+	/*
+	
+	[제품 비교 담기]
+	@param
+		- memberSeq : 사용자ID
+	@return
+		- compareID
+	*/
+	function pickCompare(compareId) {
+		log("담기기!"+compareId);
+		var url = prefix + "/api/prod/pick_compare.do";
+		log("request url : ["+url+"]");
+		var param = {
+				compare_id : compareId
+		}
+				
+		param = JSON.stringify(param);
+		
+		$.ajax({
+	        url: url,
+	        type:'post',
+	        data: param,
+	        contentType:"application/json",
+	        success: function(data){
+	        	log("[비교 담아두기 결과]");
+	        	log(data);
+	        	if(data['state'] == STATE_SUCCESS){
+	        		alert("담기 완료");
+	        		
+	        	} else{
+	        		alertErrorMessage(data['error_message']);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	function saveCompare(func, subData) {
+		
+		let pageStatus = getUrlParams();
+		let prodIds = pageStatus['prodIds'].split(",");
+		let categId = pageStatus['categId'];
+		
+		var url = prefix + "/api/prod/save_compare.do";
+		log("request url : ["+url+"]");
+		var param = {
+				prod_ids : prodIds,
+				categ_id : categId
+		}
+				
+		param = JSON.stringify(param);
+		
+		$.ajax({
+	        url: url,
+	        type:'post',
+	        data: param,
+	        contentType:"application/json",
+	        success: function(data){
+	        	log(data);
+	        	if(data['state'] == STATE_SUCCESS){
+	        		compareId = data['data'];
+	        		func(compareId, subData);
+	        		
+	        	} else{
+	        		alertErrorMessage(data['error_message'], true);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	function contentShare(compareId, shareMedia) {
+		hideShareAlert();
+		log("공유하기 ! "+ compareId);
+		log("media : "+shareMedia);
+		let url = prefix + "/api/share/gen_share_link.do";
+		log("[비교 공유 URL] : "+url);
+		let param = {
+				content_id : compareId,
+				content_type : TYPE_COMPARE,
+				share_media : shareMedia
+		};
+		
+		param = JSON.stringify(param);
+		
+		console.log("[비교 공유 파라미터]");
+		console.log(param);
+		
+		$.ajax({
+	        url: url,
+	        type:'post',
+	        data: param,
+	        contentType:"application/json",
+	        success:function(data){
+	        	if(data['state'] == STATE_SUCCESS){
+					
+	        		if(shareMedia == 1) {
+	        			window.open( 'http://www.facebook.com/sharer.php?u=' + encodeURIComponent(data['data']) );	
+	        		} else {
+	        			let kkShareData = {
+		        			'title': gCompareTitle,
+		        			'desc' : '제품을 비교해 보세요.',
+		        			'image' : gCompareImage,
+		        			'link' : data['data']
+		        		};
+		        		shareKakaotalk(kkShareData);
+
+	        		}
+	    		} else {
+	    			alertErrorMessage(data['error_message']);
+	    		}
+	        	
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	function getUrlParams() {
+	    var params = {};
+	    window.location.search.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(str, key, value) { params[key] = value; });
+	    return params;
+	} 
+
+</script>
+<body>    
+	
+    <!-- 공유 레이어 -->
+    <div id="div_share_layer" class="wrap_layer" style="display: none;">
+        <div class="wrap_box">
+            <div class="layer_close"><span class="layer_off"></span></div>
+            <div class="layer_box">
+                <p class="ch_tit" style="text-align:left;"><strong th:text="#{btn.share}">공유</strong> <th:block th:text="#{common.do}">하기</th:block></p>
+                <div class="wrap_log">
+
+                    <div style="height:10px;"></div>
+
+                    <div class="wrap_oauth">
+                        <a href="javascript:saveCompare(contentShare,0)" class="btn_log oauth_k">KAKAO</a>
+                        <a href="javascript:saveCompare(contentShare,1)" class="btn_log oauth_f">FACEBOOK</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="wrap_dimmed"></div>
+    </div>
+    
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a href="" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail" th:text="#{compare.title}">제품 비교</h1>
+                <div class="page_action">
+                    <a href="javascript:showOption()" class="option"></a>
+                    <div id="div_option" class="layer_option" style="display:none;">
+                        <a href="javascript:showShareLayer()" th:text="#{btn.share}">공유</a>
+                        <a href="javascript:saveCompare(pickCompare)" th:text="#{btn.pick}">담기</a>
+                        <a href="javascript:showOption()" th:text="#{btn.close}">취소</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <div class="wrap_content_padding" style="margin-top:15px;">
+
+                    <table class="tb_type_index">
+                    <colgroup>
+                    <col style="width:100px;">
+                    <col>
+                    <col>
+                    </colgroup> 
+                    <tbody>
+                    <tr>
+                        <th th:text="#{compare.prod_name}">재품명</th>
+                        <td th:each="prodInfo : ${prodList}" th:text="${prodInfo.prod.prod.prodName}">Text</td>
+                    </tr>
+                    <tr>
+                        <th th:text="#{compare.image}">이미지</th>
+                        <td th:each="prodInfo : ${prodList}">
+                        	<div class="swiper-slide" th:if="${#lists.size(prodInfo.prod.imageList) <= 0}">
+                            		<img th:src="@{/image/img_general_product_default.png}" class="pimg" alt="">
+                            </div>
+                        	<th:block th:each="image : ${prodInfo.prod.imageList}">
+                        		<img th:if="${image.imageType == 0}" th:src="@{${imagePrefix}} + '/' + ${image.imagePath} + '_600.png'" class="pimg" alt="">
+                        	</th:block>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th th:text="#{compare.review_and_rate}">리뷰/평가</th>
+                        <td th:each="prodInfo : ${prodList}">
+                        										
+                            <div class="evalue"><em class="star"></em><th:block th:text="${#numbers.formatDecimal(prodInfo.prod.avgRate, 1, 1)}">4.5</th:block><i th:text="'(' + ${prodInfo.prod.ratingCount} + ')'">(123,456)</i></div>
+                            <div class="data"><strong th:text="#{compare.review_relate}">리뷰/연관</strong><th:block th:text="${prodInfo.prod.reviewCount}">123</th:block></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th th:text="#{compare.brand}">제조사/브랜드</th>
+                        <td th:each="prodInfo : ${prodList}" th:text="${prodInfo.prod.companyName}"></td>
+                    </tr>
+                    <tr>
+                        <th th:text="#{compare.reg_date}">등록일</th>
+                        <td th:each="prodInfo : ${prodList}" th:text="${#dates.format(prodInfo.prod.prod.regDate, 'YYYY년 MM월 dd일')}"></td>
+                    </tr>
+                    <tr>
+                        <th th:text="#{compare.low_price}">최저가격</th>
+                        <td th:each="prodInfo : ${prodList}">
+                        	<span class="mprice" th:text="${currencyLocale + #numbers.formatDecimal(prodInfo.prodPriceInfoVo.price, 3, 'COMMA', 0, 'POINT')}"></span>
+                        </td>	                 	
+                    </tr>
+                    </tbody>
+                    </table>
+
+                </div>
+
+            </div>
+            
+        </div>
+        <!-- bottom_menu -->
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

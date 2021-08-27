@@ -1,0 +1,98 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<script th:inline="javascript">
+
+function moveEmailModify(email){
+	
+	if(email != null){
+		location.href = prefix + "/m/member_mgmt/email_modify.do?e="+email;
+	}else{
+		location.href = prefix; 
+	}
+}
+
+function resendingEmail(email){
+	var url = prefix+"/api/member_mgmt/change_email.do";
+	console.log("[request URL]"+url);
+	//변경 전 이메일/변경 할 이메일
+	var reqData = {
+			nowEmail : email,
+			modifyEmail : email
+	}
+	
+	$.ajax({
+		url:url,
+		type:"post",
+		data:reqData,
+		success:function(data){
+			log(data);
+			if(data['error_message'] == null){
+        		alert(/*[[#{res.send_email}]]*/);
+        		location.href = prefix;
+        	} else{
+    			alert(getErrorMsg(data['state']));
+    		}
+		},
+		error:function(request, status, error){
+        	alertNetworkErr();
+        }
+	});
+}
+</script>
+<body>    
+
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a href="" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail" th:text="#{member.enroll2}">회원 가입</h1>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <div class="wrap_log">
+
+                    <div class="wrap_account">
+                        <div class="wrap_sbody">
+                            <h2><th:block th:text="#{common.site_name}">REVUNARA</th:block> <th:block th:text="#{member.enroll3}">회원가입이</th:block><br><th:block th:text="#{member.ment.apply}">신청되었습니다.</th:block>
+                            	<p style="font-size:1rem;padding-top:10px;" th:text="|${#calendars.format(regDate,'YYYY년 MM월 dd일 HH:mm')} 신청됨|">2020년 0월 0일 14:34 신청됨</p>
+                            </h2>
+                            <p class="ment">
+                            <th:block th:text="#{member.join.prepend.sentence}">입력 하신</th:block> <span style="color:#ff9292;" th:text="${memberInfo.email}">aaa@bbb.com</span> <th:block th:text="#{member.join.append.sentence}">메일로 인증 메일을
+                            발송하였습니다.
+                            인증 메일 확인 후 인증 버튼을
+                            클릭하셔야 회원가입이 완료됩니다.</th:block>
+                            </p>
+                        </div>
+                        <ul class="reward_now1">
+                            <li>
+                                <span class="tit" th:text="#{member.certify_term}">인증 기간</span>
+                                <p class="num" style="font-size:1rem;" th:text="|${#calendars.format(expireDate,'YYYY년 MM월 dd일 HH:mm')}#{member.until}|">2020년 0월 0월까지</p>
+                            </li>
+                        </ul>
+                        <div class="btn_box">
+                        	<a th:href="|javascript:resendingEmail('${email}')|" class="btn_type_bg btn_type_green_fill" style="display:block;margin:-18px 36px 10px 36px;">인증 메일 재발송</a>
+                            <a th:href="|javascript:moveEmailModify('${email}')|" class="btn_type_bg btn_type_gray_none_fill" th:text="#{member.modify}">수정</a>
+                            <a th:href="@{/}" class="btn_type_bg btn_type_orange_fill" th:text="#{btn.ok}">확인</a>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+            
+        </div>
+
+        <th:block th:replace="/common/footer.html"></th:block>
+
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

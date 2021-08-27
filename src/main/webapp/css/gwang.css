@@ -1,0 +1,41 @@
+@charset "utf-8";
+
+<!-- hide scroll bar -->
+.none_scroll{ -ms-overflow-style: none; } 
+.none_scroll::-webkit-scrollbar{ display:none; }
+.carousel-control-center {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  display: -ms-flexbox;
+  display: flex;
+  margin: 10px 0px 10px 0px;
+  -ms-flex-align: center;
+  align-items: center;
+  -ms-flex-pack: center;
+  justify-content: center;
+  width: 100%;
+  color: #fff;
+  text-align: center;
+  opacity: 1.0;
+  transition: opacity 0.15s ease;
+}
+
+.search-bar {
+  position: relative;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-align: center;
+  align-items: center;
+  -ms-flex-pack: center;
+  justify-content: center;
+  width: 100%;
+  color: #fff;
+  text-align: center;
+  opacity: 1.0;
+  transition: opacity 0.15s ease;
+}

@@ -1,0 +1,1329 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<head>
+	<meta property="og:title" th:content="${prodInfo.prodItem.dispProdName}">
+	<meta property="og:description" th:content="${prodInfo.prodItem.dispProdName}">
+	<meta property="og:image" th:content="${prodInfo.prodItem.representImgUrl}">
+	<!-- Link Swiper's CSS -->
+	<link rel="stylesheet" type="text/css" th:href="@{/css/swiper.min.css}">  
+	<!-- Swiper JS -->
+	<script th:src="@{/js/swiper.min.js}"></script>
+	<script type="text/JavaScript" src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+	<link rel="stylesheet" type="text/css" th:href="@{/css/jquerysctipttop.css}" >
+    <link rel="stylesheet" type="text/css" th:href="@{/css/jqcloud.css}">
+    <script type="text/javascript" th:src="@{/js/jqcloud-1.0.4.js}"></script>
+    <script th:inline="javascript" th:src="@{/js/tom.search.autocomplate.js}"></script>
+    
+</head>
+<script th:inline="javascript">
+	var prodInfo = /*[[${prodInfo}]]*/;
+
+	var priceStat = /*[[${priceStat}]]*/;
+	var userLoginType = /*[[${userLoginType}]]*/;
+	var kakaoKey = /*[[${kakaoKey}]]*/;
+	var prodName = /*[[${prodName}]]*/;
+	var repImgPath = /*[[${prodInfo.prodItem.representImgUrl}]]*/;
+	var imgPrefix = /*[[${imgPrefix}]]*/;
+	var wordList = /*[[${wordList}]]*/;
+	var lastRatingId = /*[[${prodInfo.lastRatingId}]]*/
+	var refreshCode = /*[[${refreshCode}]]*/
+	var topics = /*[[${topics}]]*/
+	
+
+	var prodId = null;
+	var evaluePerPage = 5;
+	
+	$(document).ready(function() {
+		log(prodInfo);
+		log("last rating id : "+ lastRatingId);
+		log(priceStat);
+		
+		Kakao.init(kakaoKey);
+		
+		if(getParams("prod_id") != null) {
+			prodId = getParams("prod_id")[0];
+		}
+		
+		printPriceGraph(priceStat);
+		if(wordList != null){
+			printWordCloud(wordList);
+		}
+		
+		if(topics != null){
+			printTopicLevel()
+		}
+		
+	})
+	
+	function goToReviewWrite(prodId) {
+		if(userLoginType == LOGIN_TYPE_TEMP) {
+			loginConfirm();
+		} else {
+			window.location.href = prefix + "/m/review/write_page.do?prodId="+prodId;
+		}
+	}
+	
+	function printPriceGraph(statList) {
+		if(statList != null && statList.length >= 1) {
+			$("#div_price_chart").css("display", "");	
+			window.jQuery.ChartJs.init(statList);
+			
+			let lastStat = statList[statList.length-1];
+			$("#span_price_chart_desc").html(moment(lastStat['stat_end']).format('YYYY-MM-DD HH') + "시 기준");
+		} else {
+			$("#div_price_chart").css("display", "none");
+		}
+		
+	}
+	
+	function onOffLayer(layerName){
+		if($("#"+layerName).css("display") == "none"){
+			$("#"+layerName).css("display","");
+		} else {
+			$("#"+layerName).css("display","none")
+		}
+		
+	}
+	
+	function reportContent() {
+		if(userLoginType == LOGIN_TYPE_TEMP) {
+			loginConfirm();
+		} else {
+			window.location.href = prefix + "/m/report.do?contentType="+TYPE_PROD+"&contentId="+prodId;
+		}
+		
+	}
+	
+	
+	function contentShare(shareMedia) {
+		
+		// 먼저 공유 정보를 DB에 저장
+		var url = prefix + "/api/share/gen_share_link.do";
+		let param = {
+				content_id : prodId,
+				content_type : TYPE_PROD,
+				share_media : shareMedia
+		}
+		param = JSON.stringify(param);
+		
+		$.ajax({
+	        url: url,
+	        type:'post',
+	        data: param,
+	        contentType:"application/json",
+	        success:function(data){
+	        	if(data['state'] == STATE_SUCCESS) {
+	        		if(shareMedia == 1) {
+	        			window.open( 'http://www.facebook.com/sharer.php?u=' + encodeURIComponent(data['data']) );	
+	        		} else {
+	        			
+	        			let kkShareData = {
+	        				'title': prodName,
+	        				'desc' : prodName + " 자세히 보기",
+	        				'image' : repImgPath,
+	        				'link' : data['data']
+	        			};
+	        			shareKakaotalk(kkShareData);
+	        			
+	        		}
+	        		onOffLayer("div_share_layer");
+	    		} else {
+	    			alertErrorMessage(data['error_message'], true);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}	
+	
+	function pickProd(likeObj){
+		if(userLoginType == LOGIN_TYPE_TEMP) {
+			loginConfirm();
+		} else {
+			let checked = !$(likeObj).hasClass("like_on");
+			log(checked)
+			
+			let url = prefix + "/api/member_pick/pick_content.do?pick_type="+TYPE_PROD+"&content_id="+prodId + "&pick_status=" + checked;
+			//log("pickContentGlobal ["+url+"]");
+			$.ajax({
+		        url: url,
+		        type:'get',
+		        success:function(data){
+		        	if(data['state'] == STATE_SUCCESS){
+		        		log(data);
+		        		if(checked){
+		        			$(likeObj).addClass("like_on");
+		        		} else {
+		        			$(likeObj).removeClass("like_on");
+		        		}
+		        	} else {
+		        		alertErrorMessage(data['error_message']);
+		        	}
+		        },
+		        error:function(request, status, error){
+		        	alertNetworkErr();
+		        }
+		    });
+		}
+		
+	}
+	
+	function loginConfirm(){
+		$("#div_login_layer").css("display","");
+	}
+	
+	function changeScore(starNum){
+		log(starNum);
+		$(".gageR").removeClass("on");
+		for(let i=1; i<= starNum; i++){
+			$(".score0"+i).addClass("on");
+		}
+		
+		$(".ment").css("display","none");
+		$(".rate_ment0"+starNum).css("display","");
+		
+	}
+	
+	function rating(){
+		let evalueOpinion = $("#evalue_opinion").val();
+		log(evalueOpinion.length);
+		if(evalueOpinion == ""){
+			alert("평가 의견을 입력해주세요.");
+		} else if(evalueOpinion.length < 10) {
+			alert("평가 의견은 10자 이상 입력해주세요.");
+		} else {
+			let pRatingInfo = {};
+			let evalueCount = 3;
+			pRatingInfo['comment'] = evalueOpinion;
+			pRatingInfo['prod_id'] = Number(prodId);
+			pRatingInfo['rating'] = $("#rate_score00 > .on").length;
+			
+			for(let i=1; i<=evalueCount; i++){
+				pRatingInfo['prop0'+i+'_score'] = $("#rate_score0"+i+" > .on").length;
+			}
+			log(pRatingInfo);
+			
+			let reqJsonStr = JSON.stringify(pRatingInfo);
+			
+			let url = prefix + '/api/prod/rate.do';
+			
+			$.ajax({
+		        url: url,
+		        type:'post',
+		        data: reqJsonStr,
+		        contentType:"application/json",
+		        success:function(data){
+		        	log(data);
+		        	if(data['state'] == STATE_SUCCESS) {
+		        		hideEvalueLayer();
+		        		offEvalueBtn();
+		        		addPrependEvalue(data['data']['rating_dto']);
+		        		reflectRatingStat(data['data']['rating_summ']);
+		        		alert(/*[[ #{info.regist.ok} ]]*/);
+		    		} else{
+		    			alertErrorMessage(data['error_message']);
+		    		}
+		        },
+		        error:function(request, status, error){
+		        	alertNetworkErr();
+		        }
+		    });
+		}
+		
+	}
+	
+	function delEvalue(ratingId){
+		let answer = confirm("정말 삭제하시겠습니까?");
+		if(answer){
+			let url = prefix + '/api/prod/hide_prod_evalue.do?rating_id='+ratingId;
+			
+			$.ajax({
+		        url: url,
+		        type:'get',
+		        success:function(data){
+		        	if(data['state'] == STATE_SUCCESS) {
+		        		deleteEvalueContent(ratingId);
+		        	} else{
+		    			alertErrorMessage(data['error_message']);
+		    		}
+		        	
+		        },
+		        error:function(request, status, error){
+		        	alertNetworkErr();
+		        }
+		    });
+		}
+			
+		
+	}
+	
+	function deleteEvalueContent(ratingId){
+		$("#rate_"+ratingId).remove();
+	}
+	
+	
+	function reflectRatingStat(ratingSumm){
+		let ratingAvg = ratingSumm['avg_rating_as_string'];
+		let starCls = ratingSumm['rating_to_star_img_cls'];
+		let voterNum = ratingSumm['voter_as_string'];
+		
+		$("#rate_avg1").text(ratingAvg);
+		$("#star_score1").removeClass().addClass("rate_star rate_starb_"+starCls);
+		$("#voter_num1").text(voterNum);
+		
+		$("#rate_avg2").html(ratingAvg+"<i>"+/*[[#{common.score}]]*/+"</i>");
+		
+		$("#star_score2").removeClass().addClass("rate_star rate_starb_"+starCls);
+		$("#voter_num2").text(voterNum);
+		
+		$("#bar_5score").css("width",ratingSumm['rating5_pct'].toFixed(0)+'%');
+		$("#percent_5score").text(ratingSumm['rating5_pct'].toFixed(0)+'%');
+		
+		$("#bar_4score").css("width",ratingSumm['rating4_pct'].toFixed(0)+'%');
+		$("#percent_4score").text(ratingSumm['rating4_pct'].toFixed(0)+'%');
+		
+		$("#bar_3score").css("width",ratingSumm['rating3_pct'].toFixed(0)+'%');
+		$("#percent_3score").text(ratingSumm['rating3_pct'].toFixed(0)+'%');
+		
+		$("#bar_2score").css("width",ratingSumm['rating2_pct'].toFixed(0)+'%');
+		$("#percent_2score").text(ratingSumm['rating2_pct'].toFixed(0)+'%');
+		
+		$("#bar_1score").css("width",ratingSumm['rating1_pct'].toFixed(0)+'%');
+		$("#percent_1score").text(ratingSumm['rating1_pct'].toFixed(0)+'%');
+		
+		log(ratingSumm);
+	}
+	
+	function offEvalueBtn(){
+		$(".btn_evalue_show").css("display","none");
+		$(".evalue_on").css("display","");
+	}
+	
+	function makeEvalueLi(ratingInfo){
+		let imgUrl = prefix + "/image/img_general_profile_default.png";
+		if(ratingInfo['profile_image_path'] != null){
+			imgUrl = imgPrefix + "/" + ratingInfo['profile_image_path'] + "_300.png?refreshCode="+refreshCode;
+		}
+		
+		let regDate = "-";
+		if(ratingInfo['rating_date'] != null){
+			regDate = moment(ratingInfo['rating_date']).format('YYYY.MM.DD');
+		}
+		
+		let appendLi = 	'<li id="rate_'+ratingInfo['prod_rating_id']+'">'+                      
+						'    <div class="list_type_product_land">'+
+						'        <div class="profile"><img src="'+imgUrl+'" alt=""></div>'+
+						'        <div class="text" >'+
+						'            <p class="title ellipsis_1">'+ratingInfo['nick_name']+'<em>L.'+ratingInfo['level']+'</em></p>'+
+						'            <p class="date"><i>'+regDate+'</i><span class="eval"><em></em>'+ratingInfo['rating'].toFixed(1)+'</span></p>'+
+						'        </div> '+                                   
+						'    </div>'+
+						'    <div class="desc menty">'+
+								ratingInfo['comment']+
+						'    </div>';
+		if(ratingInfo['my_evalue'] == true){
+			appendLi += '    <div class="prd_line">'+
+						'        <a href="javascript:delEvalue('+ratingInfo['prod_rating_id']+')" class="delete">삭제</a>'+
+						'    </div>'
+		}
+			appendLi +=	'</li>';
+						
+		return appendLi;
+	}
+	
+	function addPrependEvalue(ratingInfo){
+		
+		let appendLi = makeEvalueLi(ratingInfo);
+		
+		$("#ul_evalue_comment").prepend(appendLi);
+	}
+	
+	function addAppendEvalueList(list){
+		let appendLi = '';
+		for(let i=0; i<list.length; i++){
+			appendLi += makeEvalueLi(list[i]);
+		}
+		
+		if(list.length < evaluePerPage){
+			$("#div_evalue_more").css("display","none");
+		}
+		
+		$("#ul_evalue_comment").append(appendLi);
+	}
+	
+	function evalueListMore(){
+		
+		let urlParam = 'lastContentId='+lastRatingId +
+		'&extraId='+prodId+
+		'&perPage='+evaluePerPage+
+		'&orderby.field=rating_date' +
+    	'&orderby.sorting=desc';
+		
+		let reqUrl = prefix+'/api/prod/get_evalue_list.do?'+urlParam;
+		log("["+reqUrl+"]");
+		
+		$.ajax({
+	        url: reqUrl,
+	        type:'get',
+	        success:function(data){
+	        	log(data);
+	        	if(data['state'] == STATE_SUCCESS){
+	        		addAppendEvalueList(data['list']);
+	    		} else {
+	    			alertErrorMessage(data['error_message'], true);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+		
+	}
+	
+	
+	
+	function showEvalueLayer(){
+		if(userLoginType == LOGIN_TYPE_TEMP) {
+			loginConfirm();
+		} else {
+			posY = $(window).scrollTop();
+			wHeight = window.innerHeight;	
+
+			jQuery("html, body").addClass("not_scroll");
+			jQuery(".wrap_layer_f").css({position:"absolute",display:"block",overflow:"auto",height:wHeight,top:"posY"});
+		}
+	}
+	
+	function hideEvalueLayer(){
+		jQuery("html, body").removeClass("not_scroll");
+		jQuery(".wrap_layer_f").css("display","none");
+		posY = $(window).scrollTop(posY);
+	}
+	
+	function printWordCloud(wordList){
+		$("#keywords_cloud").jQCloud(wordList);
+	}
+	
+function printTopicLevel() {
+		
+		if(topics == null) {
+			return;
+		}
+		
+		let topicData = JSON.parse(topics['result']);
+		
+		console.log(topicData);
+		printTopicPieChart(topicData);
+		printTopicLineChart(topicData);
+		
+		
+		
+	}
+	
+	
+	function printTopicPieChart(topicData) {
+		let topicInfos = topicData['topic_infos'];
+		
+		let label = [];
+		let labelData = [];
+		for(let i=0; i<topicInfos.length; i++) {
+			let topic = topicInfos[i];
+			label.push(topic['topic_name']);
+			labelData.push({'name': topic['topic_name'], 'value': topic['topic_sentence_count'] });
+		}
+		
+		
+		
+		let option = {
+			    title: {
+			        text: 'Topic',
+			        subtext: '댓글에서 해당토픽 언급 횟수',
+			        left: 'center'
+			    },
+			    tooltip: {
+			        trigger: 'item',
+			        formatter: '{a} <br/>{b} : {c} ({d}%)'
+			    },
+			    legend: {
+			        orient: 'vertical',
+			        left: 'left',
+			        data: label
+			    },
+			    series: [
+			        {
+			            name: 'Topic',
+			            type: 'pie',
+			            radius: '55%',
+			            center: ['50%', '60%'],
+			            data: labelData,
+			            emphasis: {
+			                itemStyle: {
+			                    shadowBlur: 10,
+			                    shadowOffsetX: 0,
+			                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+			                }
+			            }
+			        }
+			    ]
+			};
+		var topicPie = echarts.init(document.getElementById('topic_pie'), null);
+		topicPie.setOption(option);
+		
+		/*
+		topicPie.on('click', function (params) { 
+			let selectedName = params['name'];
+			console.log("Click Name ["+selectedName+"]");
+			printTopicLineChart();
+		});
+		*/
+	}
+	
+	
+	
+	function printTopicLineChart(topicData) {
+		
+		let topicInfos = topicData['topic_infos'];
+		
+		let label = [];
+		let veryHighValue = [];
+		let highValue = [];
+		let mediumValue = [];
+		let lowValue = [];
+		let veryLowValue = [];
+		
+		let values = [veryHighValue, highValue, mediumValue, lowValue, veryLowValue];
+		
+		for(let i=0; i<topicInfos.length; i++) {
+			let topic = topicInfos[i];
+			label.push(topic['topic_name']);
+			
+			
+			veryHighValue.push(topic['level5_count']);
+			highValue.push(    topic['level4_count']);
+			mediumValue.push(  topic['level3_count']);
+			lowValue.push(     topic['level2_count']);
+			veryLowValue.push( topic['level1_count']);
+		}
+		
+		let levels =  ['매우긍정', '긍정', '보통', '부정', '매우부정'];
+		let colors =  ['#1c28d6', '#379fdb', '#cccccc', '#ff8c8c', '#ff0000'];
+		
+		
+		let serieses = [];
+		for(let i=0; i<levels.length; i++) {
+			let series = {
+		            name: levels[i],
+		            type: 'bar',
+		            stack: '总量',
+		            label: {
+		                show: true,
+		                position: 'insideRight'
+		            },
+		            data: values[i],
+		            itemStyle: {
+		            	normal : {
+		            		color: colors[i]
+		            	}
+	                }
+		        };
+			serieses.push(series)
+		}
+		
+		
+		let option = {
+			    tooltip: {
+			        trigger: 'axis',
+			        axisPointer: {            // 坐标轴指示器，坐标轴触发有效
+			            type: 'shadow'        // 默认为直线，可选为：'line' | 'shadow'
+			        }
+			    },
+			    legend: {
+			        data: levels
+			    },
+			    grid: {
+			        left: '3%',
+			        right: '4%',
+			        bottom: '3%',
+			        containLabel: true
+			    },
+			    xAxis: {
+			        type: 'value'
+			    },
+			    yAxis: {
+			        type: 'category',
+			        data: label
+			    },
+			    series: serieses
+			};
+		var topicLine = echarts.init(document.getElementById('topic_line'), null);
+		topicLine.setOption(option);
+		
+		
+		topicLine.on('click', function (params) { 
+			//console.log(params);
+			let name       = params['name'];
+			let seriesName = params['seriesName'];
+			
+			printTopicSubSentence(name, seriesName, topicInfos);
+		});
+	}
+	
+	
+	function printTopicSubSentence(name, seriesName, topicInfos) {
+		
+		console.log(name);
+		console.log(seriesName);
+		console.log(topicInfos);
+		
+		//['매우긍정', '긍정', '보통', '부정', '매우부정']
+		let sentences = [];
+		for(let i=0; i<topicInfos.length; i++) {
+			if(topicInfos[i]['topic_name'] == name){
+				
+				if(seriesName == '매우긍정') {
+					sentences = topicInfos[i]['level5_sentences'];
+					
+				} else if(seriesName == '긍정') {
+					sentences = topicInfos[i]['level4_sentences'];
+					
+				} else if(seriesName == '보통') {
+					sentences = topicInfos[i]['level3_sentences'];
+					
+				} else if(seriesName == '부정') {
+					sentences = topicInfos[i]['level2_sentences'];
+					
+				} else if(seriesName == '매우부정') {
+					sentences = topicInfos[i]['level1_sentences'];
+					
+				}
+			}
+		}
+		
+		
+		$("#topic_sub_sentence").empty();
+		for(let i=0; i<sentences.length; i++) {
+			
+			$("#topic_sub_sentence").append("<tr><td>("+(i+1)+") " + sentences[i] + "</td></tr>");
+		}
+		
+		
+	}
+</script>
+
+
+<body>    
+    <!-- S:Layer 로그인 -->
+    <div id="div_login_layer" class="wrap_layer" style="display: none;">
+
+        <!-- 해당 Div만 각 레이어에 사용하면 된다. -->
+        <div class="wrap_box">
+            <div class="layer_close"><span class="layer_off"></span></div>
+            <div class="layer_box">
+                <p class="ch_tit" style="text-align:center;border:none;"><strong th:text="#{common.login}">로그인</strong><th:block th:text="#{common.msg.need}">이 필요합니다.</th:block></p>
+            </div>
+            <div class="btn">
+                <a class="btn_type_bg btn_type_gray_none_fill layer_off" th:text="#{btn.close}">취소</a>
+                <a th:href="@{/m/login_page.do}" class="btn_type_bg btn_type_orange_fill layer_off" th:text="#{common.login}">로그인</a>
+            </div>
+        </div>
+        
+        <div class="wrap_dimmed"></div>
+    </div>
+    
+    <!--  S:Layer 공유 레이어 -->
+    <div id="div_share_layer" class="wrap_layer" style="display: none;">
+        <div class="wrap_box">
+            <div class="layer_close"><span class="layer_off"></span></div>
+            <div class="layer_box">
+                <p class="ch_tit" style="text-align:left;"><strong>공유</strong> 하기</p>
+                <div class="wrap_log">
+
+                    <div style="height:10px;"></div>
+
+                    <div class="wrap_oauth">
+                        <a href="javascript:contentShare(0)" class="btn_log oauth_k">KAKAO</a>
+                        <a href="javascript:contentShare(1)" class="btn_log oauth_f">FACEBOOK</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="wrap_dimmed"></div>
+    </div>
+    <!-- S:Layer 평가하기 -->
+    <div id="div_evalue_layer" class="wrap_layer_f" style="display: none;">
+        <div class="wrap_box_f">
+
+            <div class="head_wrap">
+                <a class="btn_close evalue_hide"></a>
+                <div class="title_wrap">
+                    <h1 class="title_detail">제품 평가</h1>
+                </div>
+            </div>
+    
+            <div class="content">
+    
+                <div class="report" style="padding-top:50px;">
+                    <h6 class="ellipsis_1" style="font-size:1.2rem;padding:0 20px 5px 20px;" th:text="${prodInfo.prodItem.dispProdName}">APPLE 에어팟 2세대 MV7N2KH/A</h6>
+                    <p class="prate_step">이 제품에 대하여 만족하셨나요?</p>
+    
+                    <!-- 평가 전에는 starRev, 평가 후에는 클래스를 starRev_finish 교체 후 평점 만큼 on 처리 / 기본 3점 배점 상태-->
+                    <div class="wrap_starRev">
+                        <div id="rate_score00" class="starRev">
+                            <span id="pr_r01" class="starR on" onclick="changeScore(1)"></span>
+                            <span id="pr_r02" class="starR on" onclick="changeScore(2)"></span>
+                            <span id="pr_r03" class="starR on" onclick="changeScore(3)"></span>
+                            <span id="pr_r04" class="starR" onclick="changeScore(4)"></span>
+                            <span id="pr_r05" class="starR" onclick="changeScore(5)"></span>
+                        </div>
+                        <p class="rate_ment">
+                            <strong class="ment rate_ment05" style="display: none;">최고에요</strong>
+                            <strong class="ment rate_ment04" style="display: none;">좋아요</strong>
+                            <strong class="ment rate_ment03" >보통이에요</strong>
+                            <strong class="ment rate_ment02" style="display: none;">별로에요</strong>
+                            <strong class="ment rate_ment01" style="display: none;">꽝이네요</strong> 
+                            
+                        </p>
+                    </div>
+    
+                    <div id="rate_score01" class="gageRev">
+                        <p class="sub_qt">성능은 어떤가요?</p>
+                        <span id="pr_prop01_r01" class="prop01 score01 gageR on"></span>
+                        <span id="pr_prop01_r02" class="prop01 score02 gageR on"></span>
+                        <span id="pr_prop01_r03" class="prop01 score03 gageR on"></span>
+                        <span id="pr_prop01_r04" class="prop01 score04 gageR"></span>
+                        <span id="pr_prop01_r05" class="prop01 score05 gageR"></span>        
+                    </div>
+    
+                    <div id="rate_score02" class="gageRev">
+                        <p class="sub_qt">디자인은 어떤가요?</p>
+                        <span id="pr_prop02_r01" class="prop02 score01 gageR on"></span>
+                        <span id="pr_prop02_r02" class="prop02 score02 gageR on"></span>
+                        <span id="pr_prop02_r03" class="prop02 score03 gageR on"></span>
+                        <span id="pr_prop02_r04" class="prop02 score04 gageR"></span>
+                        <span id="pr_prop02_r05" class="prop02 score05 gageR"></span>        
+                    </div>
+    
+                    <div id="rate_score03" class="gageRev">
+                        <p class="sub_qt">가격은 어떤가요?</p>
+                        <span id="pr_prop03_r01" class="prop03 score01 gageR on"></span>
+                        <span id="pr_prop03_r02" class="prop03 score02 gageR on"></span>
+                        <span id="pr_prop03_r03" class="prop03 score03 gageR on"></span>
+                        <span id="pr_prop03_r04" class="prop03 score04 gageR"></span>
+                        <span id="pr_prop03_r05" class="prop03 score05 gageR"></span>        
+                    </div>
+    
+                    <div class="wrap_pment" style="margin:10px 15px 30px 15px;">
+                        <p class="eval_op">
+                            <strong class="ment rate_ment05" style="display: none;">5점을 주셨네요, 어떤 점이 좋았나요?</strong>
+                            <strong class="ment rate_ment04" style="display: none;">4점을 주셨네요, 어떤 점이 좋았나요?</strong>
+                            <strong class="ment rate_ment03">3점을 주셨네요, 어떤 점이 좋았나요?</strong>
+                            <strong class="ment rate_ment02" style="display: none;">2점을 주셨네요, 어떤 점이 아쉬웠나요?</strong>
+                            <strong class="ment rate_ment01" style="display: none;">1점을 주셨네요, 어떤 점이 아쉬웠나요?</strong>
+                        </p>
+                        <textarea id="evalue_opinion" rows="5" cols="auto" class="i_textarea input_type_n comment" placeholder="평가 의견을 입력하세요. (10자 이상)"></textarea>
+                        <a href="javascript:rating()" class="btn_type_sm btn_type_gray_fill">등록</a>
+                    </div>
+    
+                </div>
+                
+            </div>
+            
+        </div>
+    </div>
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a href="javascript:history.go(-1)" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail">Product</h1>
+                <div class="search_wrap_s">
+                    <a href="javascript:showSearchPopup(true)" class="btn_search"></a>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+        
+        
+        	<th:block th:replace="/main/auto_complate.html"></th:block>
+        
+        
+        
+        
+
+            <div id="div_search_result" class="wrap_content" th:with="prodItem = ${prodInfo.prodItem}, anaReview = ${prodInfo.anaReview},
+             ratingList = ${prodInfo.ratingList}, imgList = ${prodInfo.imgList}, prodImgList=${prodInfo.productImgPathList},
+              memAct = ${prodInfo.memberAct}, priceSumm = ${prodInfo.priceSummary}, ratingSumm = ${prodInfo.ratingSummary}" >
+
+                <div class="basic_area">
+
+                    <div class="wrap_content_padding" >
+ 
+                        <h2 class="pd_title"><th:block th:text="${prodItem.companyName}">APPLE</th:block><th:block th:text="| ${prodItem.prodName}|"> 에어팟 2세대 MV7N2KH/A</th:block></h2>
+
+                        <!-- Swiper 제품 이미지 list 작업-->
+                        <div class="swiper-container" >
+                            <div class="swiper-wrapper">
+                                <div class="swiper-slide" th:each="prodImgPath : ${prodImgList}">
+                                    <img th:src="${prodImgPath}" alt="">
+                                </div>
+                            </div>
+                            <!-- Add Pagination -->
+                            <div class="swiper-pagination"></div>
+                        </div>
+
+                        <!-- Initialize Swiper -->
+                        <script>
+                        var swiper = new Swiper('.swiper-container', {
+                            pagination: '.swiper-pagination',
+                            paginationClickable: true
+                        });
+                        </script>
+
+                        <div class="pd_rate">
+                            <p class="pd_rate_ment" th:text="#{prod.rate_anal_ment}">제품의 종합 평점은 리뷰나라의 평점과 국내외 쇼핑몰의 이용자 평가를 모아서 평점과 리뷰의 키워드까지 다차원으로 분석하여 제공합니다.</p>
+                            <div class="pd_rate_box">
+                                <a th:if="${memAct.ratingCount == 0}" href="javascript:showEvalueLayer()" class="evalue btn_evalue_show" th:text="#{btn.evaluation}">평가하기</a>
+                                <a th:style="${memAct.ratingCount == 0} ? 'display:none' : ''" class="evalue_on">평가참여</a>
+                                <!-- <span class="evalue_on">평가참여</span> -->
+                                <div class="pd_rate_star">
+                                    <em id="rate_avg1" th:text="${prodItem.ratingAvgAsString}">4.0</em> <span id="star_score1" th:class="|rate_star rate_starb_${prodItem.ratingToStarImgCls}|"></span>
+                                </div>
+                                <div class="pd_rate_num">
+                                <strong id="voter_num1" th:text="${prodItem.ratingCountAsString}">123,345</strong><th:block th:text="#{common.eval.msg}">명 평가</th:block><em th:text="#{prod.how_anal_question}">어떻게 분석 ?</em>
+                                </div>                                
+                            </div>                            
+                        </div>
+
+                        <script>
+                        //피쳐 정보 확장/축소
+                        jQuery(document).ready(function(){
+                            jQuery(".pmore").click(function(){
+                                jQuery(".ss_feature").each(function(){
+                                    jQuery(this).toggleClass('ss_feature_exp');  
+                                });
+                                jQuery(".pmore").each(function(){
+                                    jQuery(this).toggleClass('pmore_c');      
+                                });
+                            });
+                            jQuery(".pd_rate_star, .pd_rate_num").click(function(){
+                                jQuery(".pd_rate_ment").each(function(){
+                                    jQuery(this).toggleClass('pd_rate_ment_exp');  
+                                });
+                            });
+                        });
+                        </script>
+
+                        <div class="sum_spec">
+                            <a class="pmore"></a>
+                            <div class="ss_feature" th:text="${prodItem.featureDpString}">
+                                이어폰 / 무선 / 코드리스 / 커널형 / 블루투스 / ver 5.0 / AAC / 액티브노이즈캔슬링 / 주변소음듣기 / H1칩셋 / 음악재생: 4.5시간 / 충전단자: 라이트닝, 무선충전 / 오토페어링 / 재생/멈춤조절 / 터치버튼 / 핸즈프리통화 / 퀵충전 / 스마트센서 / 생활방수 / 무게:5.4g / 적응형EQ / Qi인증
+                            </div>
+                        </div>
+
+                        <div class="btn_group">
+
+                            <div class="btn_group_l">
+                                <a th:href="|javascript:goToReviewWrite(${prodItem.prodId})|" class="review_right" th:text="#{btn.write.review}">리뷰 작성하기</a>
+                            </div>                          
+
+                            <div class="btn_group_r">
+                                <p class="p_sdata">
+                                    <strong th:text="#{common.select}">조회</strong><th:block th:text="${prodItem.viewCountAsString}">10K</th:block><br><strong th:text="#{filter.content.review}">리뷰</strong><th:block th:text="${prodItem.reviewCountAsString}">1K</th:block>
+                                </p>
+                                <a th:if="${memAct.pickCount > 0}" onclick="pickProd(this)" class="like like_on"></a>
+                                <a th:if="${memAct.pickCount == 0}" onclick="pickProd(this)" class="like"></a>
+                                <a href="javascript:onOffLayer('div_option')" class="more"></a>
+                                <div id="div_option" class="layer_option" style="display:none;">
+                                    <a href="javascript:onOffLayer('div_share_layer');onOffLayer('div_option')" th:text="#{btn.share}">공유</a>
+                                    <a href="javascript:reportContent();onOffLayer('div_option')" th:text="#{btn.report}">신고</a>
+                                    <a href="javascript:onOffLayer('div_option')" th:text="#{btn.close}">취소</a>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>                    
+
+                </div>
+
+                <script>
+                //탭, 위치 제어를 위한 스크립트
+                jQuery( document ).ready( function() {
+                    var jbOffset = jQuery( '.jbMenu' ).offset();
+                    let conBoxNum = 5;
+                    let dispConbox = [];
+                 
+                    for(let i=1; i<=conBoxNum; i++){
+                    	if($('#conbox'+i).css("display") != 'none'){
+                    		dispConbox.push({'boxNum' : i, 'topValue' : $("#conbox"+i).offset().top});
+                    	}
+                    }
+                    log(dispConbox);
+                    let firstTop = $(document).scrollTop();
+                    if(firstTop < dispConbox[0]['topValue']){
+                    	$('.tab_0'+dispConbox[0]['boxNum'] ).css( 'opacity','1' );
+                        $('.tab_0'+dispConbox[0]['boxNum'] ).addClass('on'); 
+                    }
+                    
+                    
+                    
+                     jQuery( window ).scroll( function() {
+                        if ( jQuery( document ).scrollTop() > jbOffset.top ) {
+                            jQuery( '.jbMenu' ).addClass( 'jbFixed' );
+                            jQuery( '.jbContent' ).css( 'margin-top','60px' );
+                        }
+                        else {
+                            jQuery( '.jbMenu' ).removeClass( 'jbFixed' );
+                            jQuery( '.jbContent' ).css( 'margin-top','0px' );
+                        }
+                    	for(let i = dispConbox.length-1; i >= 0 ; i--){
+                        	if(jQuery( document ).scrollTop() > dispConbox[i]['topValue']){
+                        		jQuery( '.tab_menu_btn' ).removeClass('on').css( 'opacity','.5' );
+                                $('.tab_0'+dispConbox[i]['boxNum'] ).css( 'opacity','1' );
+                                $('.tab_0'+dispConbox[i]['boxNum'] ).addClass('on'); 
+                                break;
+                        	}
+                    	}
+                    });                     
+
+                    jQuery('.tab_menu_btn').on('click',function(){
+                        jQuery( document ).scrollTop(jbOffset.top);
+                        //버튼 색 제거,추가
+                        jQuery('.tab_menu_btn').removeClass('on');
+                        jQuery(this).addClass('on')
+                        
+                        //컨텐츠 제거 후 인덱스에 맞는 컨텐츠 노출
+                        var idx = jQuery('.tab_menu_btn').index(this);
+                        
+                        jQuery('.tab_box').hide();
+                        jQuery('.tab_box').eq(idx).show();
+                    });
+                    
+                });  
+
+                function fnMove(seq){
+                    //jQuery( '.jbMenu' ).addClass( 'jbFixed' );
+                    var offset = $("#conbox" + seq).offset();
+                    $('html, body').animate({scrollTop : offset.top+10}, 400);
+                    //$('html, body').scrollTo(offset.top,0);
+                    //alert(offset.top);
+                }                  
+                </script>
+
+                <div class="tab_wrap">
+                    <div class="jbMenu">            
+                        <div class="tab_menu_container">
+                            <button th:style="${#lists.size(reviewResult.extVideoList) != 0 and #lists.size(reviewResult.aggReviewList) != 0} ? '' : 'display:none'" class="tab_01 tab_menu_btn" type="button" onclick="fnMove('1')"><span th:text="#{common.tab.review}">리뷰</span></button>
+                            <button th:style="${#lists.size(prodResult.recommProdList) != 0 and #lists.size(prodResult.similarProdList) != 0} ? '' : 'display:none'" class="tab_02 tab_menu_btn" type="button" onclick="fnMove('2')"><span th:text="#{common.tab.recommend}">유사/추천제품</span></button>
+                            <button class="tab_03 tab_menu_btn" type="button" onclick="fnMove('3')"><span th:text="#{common.tab.eval_opnion}">평가/의견</span></button>
+                            <button class="tab_04 tab_menu_btn" type="button" onclick="fnMove('4')"><span th:text="#{common.tab.prod_info}">제품정보</span></button>
+                            <button th:style="${#lists.size(priceSumm.lowestPrices) != 0 and #lists.size(priceSumm.priceStat) != 0} ? '' : 'display:none'" class="tab_05 tab_menu_btn" type="button" onclick="fnMove('5')"><span th:text="#{common.tab.price_info}">가격정보</span></button>
+                        </div>
+                    </div>
+
+                    <div class="jbContent">
+                        <div id="conbox1" class="conbox_f" th:style="${#lists.size(reviewResult.extVideoList) != 0 and #lists.size(reviewResult.aggReviewList) != 0} ? '' : 'display:none'">
+
+                            <div class="conbox" >
+                                
+                                <h3><span th:text="#{common.tab.review}">리뷰</span></h3>
+
+                                <div class="tap_box_body">    
+                                                                
+								<th:block th:if="${#lists.size(reviewResult.extVideoList) > 0}">
+                                    <div class="group_title">
+                                        <p class="title" th:text="#{review.type.video}">동영상</p>
+                                        <a th:href="|@{/m/prod/video_list_more.do}?prodId=${prodInfo.prodItem.prodId}|" class="more" th:text="#{btn.more}">더보기<em></em></a>
+                                    </div>
+                    
+                                        <!-- S:List Flat -->
+                                    <ul class="list_type_flat">       
+                                        <th:block th:each="item: ${reviewResult.extVideoList}">
+                                        	<th:block th:replace="/common/item_content.html"></th:block>
+                                        </th:block>                                     
+                                    </ul>
+                    			</th:block>
+                    			<th:block th:if="${#lists.size(reviewResult.aggReviewList) > 0}">
+                                    <div class="group_title">
+                                        <p class="title" th:text="#{review.type.blog}">블로그</p>
+                                        <a th:href="|@{/m/prod/article_list_more.do}?prodId=${prodInfo.prodItem.prodId}|" class="more" th:text="#{btn.more}">더보기<em></em></a>
+                                    </div>
+                    
+                                        <!-- S:List Flat -->
+                                    <ul class="list_type_flat">
+                                        <th:block th:each="item: ${reviewResult.aggReviewList}">
+                                        	<th:block th:replace="/common/item_content.html"></th:block>
+                                        </th:block>
+                                    </ul>
+                				</th:block>
+                                </div>                   
+
+                            </div>
+
+                        </div>
+                        <div id="conbox2" class="conbox_f" th:style="${#lists.size(prodResult.recommProdList) != 0 and #lists.size(prodResult.similarProdList) != 0} ? '' : 'display:none'">
+
+                            <div class="conbox">
+							
+                                <h3><span th:text="#{common.tab.recommend}">유사/추천제품</span></h3>
+
+                                <div class="tap_box_body">
+								<th:block th:if="${#lists.size(prodResult.similarProdList) > 0}">
+                                    <!-- 더보기는 타이틀까지 링크 영역을 지정 -->
+                                    <div class="group_title">
+                                        <p class="title" th:text="#{prod.similar}">유사 제품</p>
+                                        <a th:href="|@{/m/prod/similar_prod_more.do}?prodId=${prodInfo.prodItem.prodId}|" class="more" th:text="#{btn.more}">더보기<em></em></a>
+                                    </div>
+                    
+                                    <!-- S:List Flat -->
+                                    <ul class="list_type_flat">
+                                       <th:block th:each="item: ${prodResult.similarProdList}">
+                                        	<th:block th:replace="/common/item_content.html"></th:block>
+                                        </th:block>
+                                    </ul>
+								</th:block>
+								<th:block th:if="${#lists.size(prodResult.recommProdList) > 0}">
+                                    <!-- 더보기는 타이틀까지 링크 영역을 지정 -->
+                                    <div class="group_title">
+                                        <p class="title" th:text="#{prod.recommend}">추천 제품</p>
+                                        <a th:href="|@{/m/prod/recomm_prod_more.do}?prodId=${prodInfo.prodItem.prodId}|" class="more" th:text="#{btn.more}">더보기<em></em></a>
+                                    </div>
+                    
+                                    <!-- S:List Flat -->
+                                    <ul class="list_type_flat">  
+                                    	<th:block th:each="item: ${prodResult.recommProdList}">
+                                        	<th:block th:replace="/common/item_content.html"></th:block>
+                                        </th:block>
+                                    </ul>
+                                </th:block>    
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                        <div id="conbox3" class="conbox_f">
+
+                            <div class="conbox">
+
+                                <h3><span th:text="#{common.tab.eval_opnion}">평가/의견</span></h3>
+
+                                <div class="tap_box_body">
+
+                                    <div class="p_box" th:if="${prodInfo.anaReview != null}">
+                                        <div class="wrap_prate" th:if="${prodInfo.anaReview.genWordCloudData() != null}">
+
+                                            <h4 style="margin:15px 0 10px 0;padding-top:0;">
+                                                <th:block th:text="#{prod.anal_keyword}">리뷰 키워드 분석</th:block>
+                                            </h4>    
+
+                                            <div id="keywords_cloud" style="width: 100%; height: 350px;margin-bottom:10px;"></div>
+
+                                        </div>
+                                    </div>
+
+                                    <div class="p_box">
+                                        <div class="wrap_prate" id="div_evalue_opinion">
+
+                                            <h4 style="margin:15px 0 10px 0;padding-top:0;">
+                                                <th:block th:text="#{prod.evalue_rate}">평점 비율</th:block>
+                                                <a th:if="${memAct.ratingCount == 0}" href="javascript:showEvalueLayer()" class="more btn_evalue_show" th:text="#{btn.evaluation}">평가하기</a>
+                                                
+                                            </h4>                                            
+
+                                            <div class="wrap_rate_box">
+
+                                                <div class="wrap_rate_point">
+
+                                                    <div class="pd_rate_box">
+                                                        <div class="pd_rate_star">
+                                                            <em id="rate_avg2"><th:block th:text="${prodItem.ratingAvgAsString}">4.0</th:block><i th:text="#{common.score}">점</i></em> <span id="star_score2" th:class="|rate_star rate_starb_${prodItem.ratingToStarImgCls}|"></span>
+                                                        </div>
+                                                        <div class="pd_rate_num">
+                                                        <strong id="voter_num2" th:text="${prodItem.ratingCountAsString}">123,345</strong><th:block th:text="#{common.eval.msg}">명 평가</th:block>
+                                                       
+                                                        </div>                                
+                                                    </div>
+                                                </div>
+
+                                                <div class="wrap_rate_num">
+                                                    <div class="rate_num">
+                                                        <span class="rnum" th:text="|5#{common.score}|">5점</span>
+                                                        <span class="rbar"><em id="bar_5score" th:style="'width:' + ${ratingSumm.rating5Pct} +'%;'"></em></span>
+                                                        <span class="rrate" id="percent_5score" th:text="${#numbers.formatDecimal(ratingSumm.rating5Pct, 0, 0)} + '%'"></span>
+                                                    </div>
+                                                    <div class="rate_num">
+                                                        <span class="rnum" th:text="|4#{common.score}|">4점</span>
+                                                        <span class="rbar"><em id="bar_4score" th:style="'width:' + ${ratingSumm.rating4Pct} +'%;'"></em></span>
+                                                        <span class="rrate" id="percent_4score" th:text="${#numbers.formatDecimal(ratingSumm.rating4Pct, 0, 0)} + '%'"></span>
+                                                    </div>
+                                                    <div class="rate_num">
+                                                        <span class="rnum" th:text="|3#{common.score}|">3점</span>
+                                                        <span class="rbar"><em id="bar_3score" th:style="'width:' + ${ratingSumm.rating3Pct} +'%;'"></em></span>
+                                                        <span class="rrate" id="percent_3score" th:text="${#numbers.formatDecimal(ratingSumm.rating3Pct, 0, 0)} + '%'"></span>
+                                                    </div>
+                                                    <div class="rate_num">
+                                                        <span class="rnum" th:text="|2#{common.score}|">2점</span>
+                                                        <span class="rbar"><em id="bar_2score" th:style="'width:' + ${ratingSumm.rating2Pct} +'%;'"></em></span>
+                                                        <span class="rrate" id="percent_2score" th:text="${#numbers.formatDecimal(ratingSumm.rating2Pct, 0, 0)} + '%'"></span>
+                                                    </div>
+                                                    <div class="rate_num">
+                                                        <span class="rnum" th:text="|1#{common.score}|">1점</span>
+                                                        <span class="rbar"><em id="bar_1score" th:style="'width:' + ${ratingSumm.rating1Pct} +'%;'"></em></span>
+                                                        <span class="rrate" id="percent_1score" th:text="${#numbers.formatDecimal(ratingSumm.rating1Pct, 0, 0)} + '%'"></span>
+                                                    </div>    
+                                                </div>
+
+                                            </div>
+											<th:block th:if="${prodInfo.anaReview != null}">
+	                                            <div class="wrap_bar" th:if="${prodInfo.anaReview.positivePercent != null}">
+	                                                <span class="r_type type_1" th:style="|width:${prodInfo.anaReview.positivePercent}%;|"><em th:text="#{prod.eval.positive}">긍정적 평가</em><th:block th:text="|${prodInfo.anaReview.positivePercent}%|">75%</th:block></span>
+	                                                <span th:if="${prodInfo.anaReview.positivePercent <= 90}" class="r_type type_3" th:style="|width:${100-prodInfo.anaReview.positivePercent}%;|"><em th:text="#{prod.eval.negative}">부정적 평가</em><th:block th:text="|${100-prodInfo.anaReview.positivePercent}%|">75%</th:block></span>
+	                                            </div>
+            								</th:block>
+            								<th:block th:if="${topics != null}">
+           										<div class="col-md-4 col-sm-12 col-xs-12">
+													<div class="x_panel">
+										            	<div class="x_title">
+										                	<h2>Topics</h2>
+										                    <ul class="nav navbar-right panel_toolbox">
+										                    	<li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a></li>
+										                     	<li><a class="close-link"><i class="fa fa-close"></i></a></li>
+										                    </ul>
+										                    <div class="clearfix"></div>
+										                </div>
+										                
+										                
+										                <div id="topic_pie" style="height:400px;"></div>
+										                
+										            </div>
+								         		</div>
+										         
+										         
+										         
+										         
+										 		<div class="col-md-4 col-sm-12 col-xs-12">
+													<div class="x_panel">
+										            	<div class="x_title">
+										                	<h2>Topic 긍부정 정도</h2>
+										                    <ul class="nav navbar-right panel_toolbox">
+										                    	<li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a></li>
+										                     	<li><a class="close-link"><i class="fa fa-close"></i></a></li>
+										                    </ul>
+										                    <div class="clearfix"></div>
+										                </div>
+										                
+										                
+										                <div id="topic_line" style="height:400px;"></div>
+										            </div>
+										         </div>
+										         
+										         
+										         
+										         
+										         <div class="col-md-4 col-sm-12 col-xs-12">
+													<div class="x_panel">
+										            	<div class="x_title">
+										                	<h2>Topic Sub Sentence</h2>
+										                    <ul class="nav navbar-right panel_toolbox">
+										                    	<li><a class="collapse-link"><i class="fa fa-chevron-up"></i></a></li>
+										                     	<li><a class="close-link"><i class="fa fa-close"></i></a></li>
+										                    </ul>
+										                    <div class="clearfix"></div>
+										                </div>
+										                
+										                
+										                <div style="height:400px; overflow: auto;">
+											                <table >
+											                	<tbody id="topic_sub_sentence">
+											                	</tbody>
+											                </table>
+										                </div>
+										                
+										            </div>
+										         </div>
+            								
+            								
+            								
+            								</th:block>
+                                            <ul id="ul_evalue_comment" class="ullist_type_product_land reple_box" th:if="${#lists.size(ratingList) > 0}">
+                                                <li th:id="|rate_${ratingInfo.prodRatingId}|" th:each="ratingInfo : ${ratingList}">                                
+                                                    <div class="list_type_product_land">
+                                                        <div class="profile"><img th:src="${ratingInfo.profileImagePath != null} ? ${imgPrefix}+'/'+${ratingInfo.profileImagePath}+'_300.png?refreshCode='+${refreshCode} : @{/image/img_general_profile_default.png}" alt=""></div>
+                                                        <div class="text" >
+                                                            <p class="title ellipsis_1" th:utext="|${ratingInfo.nickName}<em>L.${ratingInfo.level}</em>|">둥이아빠</p>
+                                                            <p class="date"><i th:text="${#calendars.format(ratingInfo.ratingDate,'YYYY. MM. dd')}">2020.01.01</i><span class="eval"><em></em><th:block th:text="${#numbers.formatDecimal(ratingInfo.rating,1,1)}">4.5</th:block></span></p>
+                                                        </div>                                    
+                                                    </div>
+                                                    <div class="desc menty" th:text="${ratingInfo.comment}">
+                                                        와 ~ 진짜 최고의 가성비를 자랑하는 태블릿입니다.와 ~ 진짜 최고의 가성비를 자랑하는 태블릿입니다.와 ~ 진짜 최고의 가성비를 자랑하는 태블릿입니다.와 ~ 진짜 최고의 가성비를 자랑하는 태블릿입니다.와 ~ 진짜 최고의 가성비를 자랑하는 태블릿입니다.
+                                                    </div>
+                                                    <div class="prd_line">
+                                                        <a th:if="${ratingInfo.myEvalue == true}" th:href="|javascript:delEvalue(${ratingInfo.prodRatingId})|" class="delete">삭제</a>
+                                                        <a th:if="${false}" href="" class="reply">관리자 답변</a>
+                                                    </div>
+
+                                                    <div th:if="${false}" class="wrap_pment" style="margin:10px 0;">
+                                                        <textarea rows="5" cols="auto" class="i_textarea input_type_n comment" placeholder="관리자 답변을 입력하세요."></textarea>
+                                                        <a href="" class="btn_type_sm btn_type_gray_fill">등록</a>
+                                                    </div>
+                                                    
+                                            	</li>
+                                            </ul>
+            
+                                            <a id="div_evalue_more" th:if="${#lists.size(ratingList) > 4}" href="javascript:evalueListMore()" class="list_more">더보기 +</a>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+                            </div>
+
+                        </div>
+                        <div id="conbox4" class="conbox_f">
+
+                            <div class="conbox">
+
+                                <h3><span>제품정보</span></h3>
+
+                                <div class="tap_box_body">                                    
+                                    
+                                    <img th:if="${prodItem.repImg != null}" th:src="${prodItem.representImgUrl}" alt="" class="img_p">
+
+                                    <div class="p_box" th:if="${#lists.size(prodInfo.provideImgPathList) > 0}">
+                                        <div class="wrap_prate">
+											
+	                                            <h4 style="margin:30px 0 15px 0;">
+	                                                제조사 제공 이미지
+	                                            </h4>
+											<th:block th:each="imagePath : ${prodInfo.provideImgPathList}">
+                                            	<img th:src="${imagePath}" alt="" class="img_p">
+											</th:block>
+                                        </div>
+                                    </div>
+
+                                    <div class="p_intro div_box_com div_box_red">
+
+                                        <div class="p_box">
+                                            <div class="wrap_prate">
+
+                                                <h4 style="margin:30px 0 15px 0;">
+                                                    제품 스펙
+                                                </h4>
+
+                                                <table class="spec_tbl">
+                                                <colgroup>
+                                                    <col class="tit" style="width:35%;">
+                                                    <col class="dsc">
+                                                </colgroup>
+                                                <tbody>
+                                                <tr th:if="${prodItem.companyName != null}">
+                                                    <th scope="row" class="tit">제조회사</th>
+                                                    <td class="dsc" th:text="${prodItem.companyName}">삼성전자</td>
+                                                </tr>
+                                                <!-- <tr>								
+                                                    <th scope="row" class="tit">2in1태블릿</th>
+                                                    <td class="dsc"></td>
+                                                </tr> -->
+                                                <tbody th:each="specList : ${prodItem.specList}">	
+	                                                <tr>								
+	                                                    <td class="group" colspan="2" th:text="${specList.group}">특징</td>
+	                                                </tr>												
+	                                                <tr th:each="spec : ${specList.spec}">
+	                                                	<th:block th:if="${spec.value != ''}">								
+	                                                    <th scope="row" class="tit" th:text="${spec.key}">화면크기(인치)</th>
+	                                                    <td class="dsc" th:text="${spec.value}">25.65㎝(10.1인치)</td>
+	                                                </tr>													
+                                                
+                                                </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                                    <!-- 펼치고 닫기 버튼 -->
+                                    <div class="div_exp_2">
+                                        <div class="gra"></div><em></em>제품 스펙 더보기<em></em>
+                                    </div>
+                                    <div class="div_red_2"><em></em>제품 스펙 닫기<em></em></div>
+
+                                </div>
+
+                            </div>
+                        
+                        </div>
+                        <div id="conbox5" class="conbox_f" th:style="${#lists.size(priceSumm.lowestPrices) != 0 and #lists.size(priceSumm.priceStat) != 0} ? '' : 'display:none'">
+
+                            <div class="conbox" >
+
+                                <h3><span>가격정보</span></h3>
+
+                                <div class="tap_box_body">
+
+                                    <div class="p_box">
+                                        <div class="wrap_prate">
+                                    		<div id="div_price_chart" style="display: none">
+		                                        <h4 style="margin:30px 0 15px 0;">
+		                                            <th:block th:text="#{prod.lowprice.graph}">최저가 추이</th:block>
+		                                            <span id="span_price_chart_desc" class="time"></span>
+		                                        </h4>
+		                                        <div class="pd_date" style="height: 150px;margin-bottom:40px;">
+		                                            <canvas id="line-chart"></canvas>
+		                                        </div>
+		                                    </div>
+		                                    
+	        								<div th:if="${#lists.size(priceSumm.lowestPrices) > 0}">
+		                                        <h4 style="margin:30px 0 15px 0;">
+		                                            <th:block th:text="#{prod.lowprice}">최저가 정보</th:block>
+		                                            <span class="time" th:text="${#dates.format(priceSumm.latestUpdated, 'yyyy.MM.dd HH시 기준')}"></span>
+		                                        </h4>
+		                
+		                                        <ul class="pd_price">
+			                                        <th:block th:each="price : ${priceSumm.lowestPrices}">
+			                                            <li>
+			                                            	<a th:href="${price.link}">                                         	
+					                                            <span class="mlogo" th:text="${price.mallName}">쿠팡</span>  
+					                                            <th:block><span class="mprice" th:if="${price.currency.equals('KRW')}">원</span></th:block>
+					                                            <span class="mprice" th:text="${#numbers.formatDecimal(price.price, 3, 'COMMA', 0, 'POINT')}"></span>                                            
+					                                        </a>
+			                                            </li>
+			                                        </th:block>
+		                                        </ul>
+		                                     </div>
+
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+                    
+                </div>
+
+            </div>
+            
+        </div>
+        <th:block th:replace="/common/footer.html"></th:block>
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+	<!-- third party js -->
+    <script th:src="@{/js/Chart.bundle.min.js}"></script>
+    <!-- third party js ends -->
+
+    <!-- demo app -->
+    <script th:src="@{/js/tom.chartjs_price_stat.js}"></script>
+    <script th:src="@{/js/echarts/dist/echarts.min.js}"></script>
+    <!-- end demo js-->
+</body>
+
+</html>

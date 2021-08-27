@@ -1,0 +1,13 @@
+
+	<!-- mmenu scripts -->
+    <script th:src="@{/js/mmenu.polyfills.js}"></script>
+    <script th:src="@{/js/mmenu.js}"></script>
+    <script>
+        new Mmenu( document.querySelector( '#menu' ));
+        document.addEventListener( 'click', function( evnt ) {
+            var anchor = evnt.target.closest( 'a[href^="#/"]' );
+            if ( anchor ) {
+                evnt.preventDefault();
+            }
+        });
+    </script>

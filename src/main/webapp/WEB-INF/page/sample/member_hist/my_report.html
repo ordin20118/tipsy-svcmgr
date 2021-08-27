@@ -1,0 +1,291 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<script th:inline="javascript">
+
+	
+	let filterType = null;
+	let sortType = SORT_TYPE_DESC;
+	let moreJobResult = true;
+	let currentPage = 1;
+	let dataCnt = /*[[${histSize}]]*/;
+	$(document).ready(function(){
+		
+		jQuery(window).scroll(function() {
+			if (jQuery(window).scrollTop() >= jQuery(document).height() - jQuery(window).height()) {
+				if(moreJobResult && dataCnt < 100) {
+					getReportHist(currentPage+1, 20);
+		    	}
+			}
+		});	
+	})
+
+	
+	function getReportHist(nowPage, perPage){
+		let urlParam = 'paging.nowPage=' +nowPage +
+  		'&paging.perPage=' + perPage +
+  		'&orderby.field=reg_date' +
+  		'&orderby.sorting='+sortType;
+  		if(filterType != null){
+  			urlParam += '&filterType='+filterType;
+  		}
+  		
+		let reqUrl = prefix +'/api/member_info/get_report_hist.do?'+urlParam;
+		
+		$.ajax({
+	        url: reqUrl,
+	        type:'get',
+	        success:function(data){
+	        	log(data);
+	        	if(data['state'] == STATE_SUCCESS){
+	        		currentPage = nowPage;
+	        		printReportHistory(data['list']);
+	        	} else{
+	        		alertErrorMessage(data['error_message']);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	function printReportHistory(list){
+		let appendLi = makeReportAppendLi(list);
+		
+		$("#ul_report_history").append(appendLi);
+		
+		dataCnt += list.length;
+		if(list.length < 20){
+			moreJobResult = false;
+		}
+	}
+	
+	function makeReportAppendLi(list){
+		let appendLi = "";
+		if(list.length > 0){
+			for(let i=0; i<list.length; i++){
+				if(list[i]['report_info']['content_type'] == TYPE_PROD){
+					appendLi += makeProdReportLi(list[i]);
+				} else if (list[i]['report_info']['content_type'] == TYPE_REVIEW){
+					appendLi += makeReviewReportLi(list[i]);
+				}
+				
+			}
+		}
+		return appendLi;
+	}
+	
+	function makeProdReportLi(data){
+		let reportInfo = data['report_info'];
+		let contentInfo = data['content_info'];
+		
+		let regDate = "-";
+		if(contentInfo['reg_date'] != null){
+			regDate = moment(contentInfo['reg_date']).format('YYYY.MM.DD HH:mm');
+		}
+		
+		let reportType = getReportType(reportInfo['report_type'])
+		
+		let wordProd = /*[[#{filter.content.prod}]]*/;
+		
+		let appendLi = 	'<li>'+
+						'    <div class="tl_type1">'+
+						'        <div class="s_plusminus s_plus">&middot;</div>'+
+						'        <div class="cont">'+
+						'            <p class="time">'+regDate+'</p>'+
+						'            <p class="title"><span class="type1">'+wordProd+'</span>'+reportType+'</p>'+
+						'            <p class="desc"><a href="javascript:moveProd('+contentInfo['prod_id']+')">'+contentInfo['prod_name']+'</a></p>'+
+						'            <p class="ment">'+
+										reportInfo['reports']+
+						'            </p>'+
+						'        </div>'+
+						'    </div>'+
+						'</li>';
+		return appendLi;
+	}
+	
+	function makeReviewReportLi(data){
+		let reportInfo = data['report_info'];
+		let contentInfo = data['content_info'];
+		
+		let regDate = "-";
+		if(contentInfo['reg_date'] != null){
+			regDate = moment(contentInfo['reg_date']).format('YYYY.MM.DD HH:mm');
+		}
+		
+		let reportType = getReportType(reportInfo['report_type'])
+		
+		let wordReview = /*[[#{filter.content.review}]]*/;
+		
+		let appendLi = 	'<li>'+
+						'    <div class="tl_type1">'+
+						'        <div class="s_plusminus s_plus">&middot;</div>'+
+						'        <div class="cont">'+
+						'            <p class="time">'+regDate+'</p>'+
+						'            <p class="title"><span class="type2">'+wordReview+'</span>'+reportType+'</p>'+
+						'            <p class="desc"><a href="javascript:moveReview('+contentInfo['review_id']+')">'+contentInfo['title']+'</a></p>'+
+						'            <p class="ment">'+
+										reportInfo['reports']+
+						'            </p>'+
+						'        </div>'+
+						'    </div>'+
+						'</li>';
+		return appendLi;
+	}
+	
+	function getReportType(typeNum){
+		let typeName = '';
+		if(typeNum == 0){
+			typeName = /*[[#{report.type.prod_info}]]*/;
+		} else if(typeNum = 1){
+			typeName = /*[[#{report.type.category}]]*/;
+		} else if(typeNum = 2){
+			typeName = /*[[#{report.type.licence}]]*/;
+		} else {
+			typeName = /*[[#{report.type.etc}]]*/;
+		}
+		
+		return typeName;
+	}
+	
+	function changeFilterType(){
+		log($("#sel_filter_type").val());
+		if($("#sel_filter_type").val() == 0){
+			filterType = null;
+		} else {
+			filterType = $("#sel_filter_type").val();
+		}
+		contentClear()
+		getReportHist(1, 20);
+	}
+	
+	function changeSortType(){
+		log($("#sel_sort_type").val());
+		sortType = $("#sel_sort_type").val();
+		contentClear();
+		getReportHist(1, 20);
+	}
+	
+	function contentClear(){
+		$("#ul_report_history").empty()
+	}
+</script>
+<body>    
+
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a th:href="@{/m/channel/channel.do}" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail" th:text="#{member.report_hist}">신고 내역</h1>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <div class="bg_gray">
+
+                    <div class="wrap_content_padding" style="margin-bottom:0;">
+                        
+                        <div class="wrap_myinfo">
+
+                            <ul class="mydata_now">
+                                <li>
+                                    <a href="">
+                                        <span class="tit" th:text="#{filter.content.prod}">제품</span>
+                                        <p class="num" th:text="${prodCnt}">250</p>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="">
+                                        <span class="tit" th:text="#{filter.content.review}">리뷰</span>
+                                        <p class="num" th:text="${reviewCnt}">250</p>
+                                    </a>
+                                </li>
+                            </ul>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="wrap_content_padding" style="margin-top:10px;">
+
+                    <!-- S:View Filter -->
+                    <div class="wrap_viewfilter">
+
+                        <div class="viewfilter_filter">
+                            <select id="sel_filter_type" class="input_type_none" onchange="changeFilterType()">
+                                <option value = 0	th:text="#{filter.option.all_view}">전체보기</option>
+                                <option value = 100	th:text="#{filter.option.prod_repor_view}">제품신고보기</option>
+                                <option value = 210	th:text="#{filter.option.review_repor_view}">리뷰신고보기</option>
+                            </select>
+                            
+                        </div>                          
+
+                        <div class="viewfilter_sort">
+                            <select id="sel_sort_type" class="input_type_none" onchange="changeSortType()" >
+                                <option value = "desc" th:text="#{common.orderby_lately}">최신순</option>
+                                <option value = "asc" th:text="#{common.orderby_firstly}">처음순</option>
+                            </select>
+                        </div>
+
+                    </div>
+                    <ul id="ul_report_history" class="timeline_wrap" th:if="${histSize > 0}">
+                    <th:block th:each="reportHist : ${reportHist}" th:with="TYPE_PROD=100, TYPE_REVIEW=210, TYPE_EXT_REVIEW=220">
+                        <li th:if="${reportHist.contentInfo.contentInfoType == TYPE_PROD}">
+                            <div class="tl_type1">
+                                <div class="s_plusminus s_plus">&middot;</div>
+                                <div class="cont">
+                                    <p class="time" th:text="${#calendars.format(reportHist.reportInfo.regDate,'YYYY.MM.dd HH:mm')}">2020.10.10 14:34</p>
+                                    <p class="title"><span class="type1" th:text="#{filter.content.prod}">제품</span> 
+                                    	<th:block th:if="${reportHist.reportInfo.reportType == 0}" th:text="#{report.type.prod_info}">상품 정보 오류</th:block>
+                                    	<th:block th:if="${reportHist.reportInfo.reportType == 1}" th:text="#{report.type.category}">카테고리 오류</th:block>
+                                    	<th:block th:if="${reportHist.reportInfo.reportType == 2}" th:text="#{report.type.licence}">라이센스 오류</th:block>
+                                    	<th:block th:if="${reportHist.reportInfo.reportType > 2}"  th:text="#{report.type.etc}">기타</th:block>
+                                    
+                                    </p>
+                                    <p class="desc"><a th:href="|javascript:moveProd(${reportHist.reportInfo.contentId})|" th:text="${reportHist.contentInfo.prodName}">갤럭시 S10</a></p>
+                                    <p class="ment" th:text="${reportHist.reportInfo.reports}">
+                                        여기는 신고 내용을 제공하는 자리입니다.여기는 신고 내용을 제공하는 자리입니다.여기는 신고 내용을 제공하는 자리입니다.
+                                    </p>
+                                </div>
+                            </div>
+                        </li>
+                        <li th:if="${reportHist.contentInfo.contentInfoType == TYPE_REVIEW}">
+                            <div class="tl_type1">
+                                <div class="s_plusminus s_plus">&middot;</div>
+                                <div class="cont">
+                                    <p class="time" th:text="${#calendars.format(reportHist.reportInfo.regDate,'YYYY.MM.dd HH:mm')}">2020.10.10 14:34</p>
+                                    <p class="title"><span class="type2" th:text="#{filter.content.prod}">리뷰</span>
+                                    	<th:block th:if="${reportHist.reportInfo.reportType == 0}" th:text="#{report.type.prod_info}">상품 정보 오류</th:block>
+                                    	<th:block th:if="${reportHist.reportInfo.reportType == 1}" th:text="#{report.type.category}">카테고리 오류</th:block>
+                                    	<th:block th:if="${reportHist.reportInfo.reportType == 2}" th:text="#{report.type.licence}">라이센스 오류</th:block>
+                                    	<th:block th:if="${reportHist.reportInfo.reportType > 2}"  th:text="#{report.type.etc}">기타</th:block>
+                                    
+                                    </p>
+                                    <p class="desc"><a th:href="|javascript:moveReview(${reportHist.reportInfo.contentId})|" th:text="${reportHist.contentInfo.title}">갤럭시 S10</a></p>
+                                    <p class="ment" th:text="${reportHist.reportInfo.reports}">
+                                        여기는 신고 내용을 제공하는 자리입니다.여기는 신고 내용을 제공하는 자리입니다.여기는 신고 내용을 제공하는 자리입니다.
+                                    </p>
+                                </div>
+                            </div>
+                        </li>
+                    </th:block>    
+                    </ul>  
+
+                </div>
+
+            </div>
+            
+        </div>
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

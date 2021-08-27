@@ -1,0 +1,299 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+
+<script type="text/javascript" th:src="@{/js/scrypt.js}"></script>
+<script type="text/javascript" th:src="@{/js/thirdparty/buffer.js}"></script>
+<script type="text/javascript" th:src="@{/js/thirdparty/setImmediate.js}"></script>
+<script type="text/javascript" th:src="@{/js/thirdparty/unorm.js}"></script>
+
+<script th:inline="javascript">
+	var memberInfo = /*[[${memberInfo}]]*/
+	var privateInfo = /*[[${privateInfo}]]*/
+	var recommenderCode = /*[[${recommenderCode}]]*/
+	
+	const PROFILE_STATUS_CHANGE = 'selected';
+	const PROFILE_STATUS_NOT_CHANGE = 'unchanged';
+	const PROFILE_STATUS_DEFAULT_IMAGE = 'default';
+	
+	let profileStatus = PROFILE_STATUS_NOT_CHANGE;
+	
+	$(document).ready(function(){
+		log(memberInfo);
+		log(privateInfo);
+		log(recommenderCode);
+	})
+	
+	
+	
+	function previewFile() {
+		var preview = document.querySelector('img');
+		var file    = document.querySelector('input[type=file]').files[0];
+		var reader  = new FileReader();
+		
+		reader.addEventListener("load", function () {
+		  preview.src = reader.result;
+		}, false);
+	
+		if(file){
+			reader.readAsDataURL(file);
+			profileStatus = PROFILE_STATUS_CHANGE;
+		}else{
+			$("#profile").attr("src",prefix+"/image/img_general_profile_default.png")
+			profileStatus = PROFILE_STATUS_DEFAULT_IMAGE;
+		}
+	
+	}	
+	
+	function setDefaultImage(){
+		$("#file_profile_image").val("");
+		previewFile();
+		profileStatus = PROFILE_STATUS_DEFAULT_IMAGE;
+	}
+	
+	function modifyMember(){
+		let pw01   = $("#tx_user_pw01").val();
+		let pw02   = $("#tx_user_pw02").val();
+		
+		//입력하지 않으면 변경되지 않는다. ( 입력되어 있는 값만 변경..);
+		if(pw01.length == 0 || pw02.length == 0) {
+			//비밀번호 입력 없음..
+			
+			let modifyInfo = {
+			    			login_id : $("#login_id").text(),
+			    			email	 : $("#email").text(),
+			    			nick_name: $("#nick_name").val(),
+			    			age		 : $("#sel_age").val(),
+			    			gender   : $("#sel_gender").val(),
+			    			profile_status : profileStatus
+			    	}
+			
+			requestModify(modifyInfo);
+			
+		} else {
+			//비밀번호 변경시..
+			if(pw01 != pw02) {
+				alert(/*[[#{req.input.not_mached_pw}]]*/);
+				return;
+			}
+			var regex = /^.*(?=^.{8,15}$)(?=.*\d)(?=.*[a-zA-Z])(?=.*[!@#$%^&+=]).*$/;
+			
+			if(pw01.length >= 8) {
+				//PASS
+				if(regex.test(pw01) == false){
+					alert(/*[[#{req.input.incorrect_form.pw}]]*/);
+					return;
+				}
+				
+			} else {
+				alert(/*[[#{req.input.lack.pw}]]*/);
+				return;
+			}
+	
+			var password = new buffer.SlowBuffer(pw01.normalize('NFKC'));
+			var salt = new buffer.SlowBuffer(genSaltHex().normalize('NFKC'));
+			var N = 8192;
+			var r = 8;
+			var p = 1;
+			var dkLen = 32;
+			scrypt(password, salt, N, r, p, dkLen,function(error, progress, key) {
+				if (error) {
+					alert(/*[[#{error.scrypt}]]*/);
+			    } else if (key) {
+			    	let hashedPw = toHexString(key)+salt;
+			    	
+			    	let modifyInfo = {
+			    			login_id : $("#login_id").text(),
+			    			password : hashedPw,
+			    			email	 : $("#email").text(),
+			    			nick_name: $("#nick_name").val(),
+			    			age		 : $("#sel_age").val(),
+			    			gender   : $("#sel_gender").val(),
+			    			profile_status : profileStatus
+			    	}
+			    	
+			    	requestModify(modifyInfo);
+			    	
+			    	
+			    } 
+			});
+		}
+
+		
+		
+		
+	}
+	
+	function requestModify(modiData){
+		log(modiData);
+    	var reqData = JSON.stringify(modiData);
+    	var url = prefix+"/api/member_mgmt/modify_member.do";
+		console.log("[request URL]"+url);
+		
+		$.ajax({
+			url:url,
+			type:"post",
+			data:reqData,
+			contentType:"application/json",
+			success:function(data){
+				log(data);
+				if(data['error_message'] == null){
+					if(data['data'] != null){
+						uploadProfile(data.data);
+					}
+					else{
+						alert(/*[[#{res.member.modify_complete}]]*/)
+						location.href = prefix+"/m/channel/channel.do?";
+					}
+		    		
+	        	} else {
+	    			alert(getErrorMsg(data['state']));
+	    		}
+			},
+			error:function(request, status, error) {
+	        	alertNetworkErr();
+	        }
+		});
+	}
+	
+	function uploadProfile(tempKey){
+		var formData = new FormData;
+		formData.append("profile",$("#file_profile_image")[0].files[0])
+		
+		var url = prefix +"/api/member_mgmt/upload_profile.do";
+		
+		$.ajax({
+			url:url,
+			type:"post",
+			contentType:false,
+			processData:false,
+			data:formData,
+			beforeSend : function(xhr){
+	            xhr.setRequestHeader("tempKey", tempKey);
+	        },
+			success:function(data){
+				if(data['error_message'] == null){
+					alert(/*[[#{res.member.modify_complete}]]*/)
+					location.href = prefix+"/m/channel/channel.do?";
+				} else{
+					alert(getErrorMsg(data['state']));
+				}
+			},
+			error:function(request, status, error){
+				alertNetworkErr();
+			}
+			
+		})
+	}
+
+	function genSaltHex() {
+		var salt = new Uint8Array(4);
+		window.crypto.getRandomValues(salt);
+		return toHexString(salt);
+	}
+
+	function toHexString (byteArray) {
+		//const chars = new Buffer(byteArray.length * 2);
+		const chars = new Uint8Array(byteArray.length * 2);
+		const alpha = 'a'.charCodeAt(0) - 10;
+		const digit = '0'.charCodeAt(0);
+
+		let p = 0;
+		for (let i = 0; i < byteArray.length; i++) {
+			let nibble = byteArray[i] >>> 4;
+			chars[p++] = nibble > 9 ? nibble + alpha : nibble + digit;
+		    nibble = byteArray[i] & 0xF;
+		    chars[p++] = nibble > 9 ? nibble + alpha : nibble + digit;    
+		}
+		//return chars.toString('utf8');
+		return String.fromCharCode.apply(null, chars);
+	}
+	
+	
+
+</script>
+<body>    
+
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a th:href="@{/m/channel/channel.do}" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail" th:text="#{member.modify.info}">정보 수정</h1>
+                <a th:href="@{/m/member_mgmt/withdraw_page.do}" class="info_modify" th:text="#{member.withdraw.member}">회원 탈퇴</a>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content wrap_main_ser wrap_main_ser1">
+
+                <div class="wrap_account wrap_fil">
+
+                    <div class="wrap_input">
+
+                        <div class="ser_key_cont" style="padding:5px 0;">
+                            <span class="latest"><em class="title_deco" th:utext="|</em>#{member.modify.necessary}|"></em>필수 사항</span>
+                        </div> 
+
+                        <div id="login_id" class="select_disabled" style="text-align:center;" th:text="${memberInfo.loginId}">회원 아이디</div>
+
+                        <input id="tx_user_pw01" type="password" class="input_type_n" th:placeholder="#{member.member_pw}" minlength="8">
+                        <input id="tx_user_pw02" type="password" class="input_type_n" th:placeholder="#{member.member_pw_check}" minlength="8">
+                        <p class="join_ment" th:text="#{member.notice.pw_form}">비밀번호는 영문, 숫자, 특수기호 혼합 8자 이상 구성</p>
+                         <div id="email" class="select_disabled" style="text-align:center;" th:text="${privateInfo.email}">이메일</div>
+                        <p class="join_ment" th:text="#{member.notice.email}">입력된 이메일로 회원 계정 인증 메일을 발송합니다.</p>
+
+                        <div class="ser_key_cont" style="padding:20px 0 5px 0;">
+                            <span class="latest"><em class="title_deco" th:utext="|</em>#{member.modify.selective}|"></em>선택 사항</span>
+                        </div>
+
+                        <input id="nick_name" type="text" class="input_type_n" th:placeholder="#{member.input.nickname}" maxlength="6" th:value="${memberInfo.nickName}">
+                        <th:block th:if="${privateInfo.profileImagePath == null}">
+                         	<img class="photo" th:src="@{/image/img_general_profile_default.png}" height="30%" width="30%" alt="이미지 미리보기..." id="profile">
+                        </th:block>
+                        <th:block th:if="${privateInfo.profileImagePath != null}">
+                        	<img class="photo" th:src="|${imgPrefix}/${privateInfo.profileImagePath}_300.png?refreshCode=${refreshCode}|" height="30%" width="30%" alt="이미지 미리보기..." id="profile">
+                        </th:block>
+                        
+                        <input type="file" class="input_type_n" accept="image/*" id="file_profile_image" onchange="previewFile()">
+                        <select id="sel_age" class="i_select_n i_select_ac" th:field="*{privateInfo.age}">
+                            <option value=0 th:text="#{member.age}">연령</option>
+                            <option value=10 th:text="|10#{member.age_group}|">10대</option>
+                            <option value=20 th:text="|20#{member.age_group}|">20대</option>
+                            <option value=30 th:text="|30#{member.age_group}|">30대</option>
+                            <option value=40 th:text="|40#{member.age_group}|">40대</option>
+                            <option value=50 th:text="|50#{member.age_group}|">50대</option>
+                            <option value=60 th:text="|60#{member.age_group}|">60대</option>
+                            <option value=70 th:text="|70#{member.age_group_more}|">70대 이상</option>
+                        </select>
+                        <select id="sel_gender" class="i_select_n i_select_ac" th:field="*{privateInfo.gender}">
+                            <option value="N" th:text="#{member.gender}">성별</option>
+                            <option value="M" th:text="#{member.gender.man}">남</option>
+                            <option value="F" th:text="#{member.gender.female}">여</option>
+                        </select>
+                        <th:block th:if="${recommenderCode != null}">
+                        	<div class="select_disabled" style="text-align:center;" th:text="${recommenderCode}">추천인 아이디</div>
+                        </th:block>
+                        
+                        <div class="btn_box">
+                            <a th:href="@{/m/channel/channel.do}" class="btn_type_bg btn_type_gray_none_fill" th:text="#{btn.close}">취소</a>
+                            <a href="javascript:modifyMember()" class="btn_type_bg btn_type_orange_fill" th:text="#{btn.ok}">확인</a>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+            
+        </div>
+
+         <th:block th:replace="/common/footer.html"></th:block>
+
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

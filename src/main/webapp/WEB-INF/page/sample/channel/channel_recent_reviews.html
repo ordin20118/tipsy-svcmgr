@@ -1,0 +1,125 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<script type="text/javascript" th:inline="javascript">
+
+	var imgPrefix = /*[[${imgPrefix}]]*/
+	var msgBtnPick = /*[[ #{btn.pick} ]]*/;	
+	var channelId = null;
+	let listType = VIEW_CARD_TYPE ;
+	let sortType = SORT_TYPE_DESC;
+	let moreJobResult = true;
+	let currentPage = 1;
+	let dataCnt = 0;
+	$(document).ready(function(){
+
+		if(getParams("chId") != null) {
+			channelId = getParams("chId")[0];
+		}
+		
+		jQuery(window).scroll(function() {
+			if (jQuery(window).scrollTop() >= jQuery(document).height() - jQuery(window).height()) {
+				log(moreJobResult && dataCnt < 100)
+				if(moreJobResult && dataCnt < 100) {
+					getChannelRecentReviews(currentPage+1, 20);
+		    	}
+			}
+		});	
+	})
+	
+	function getChannelRecentReviews(nowPage, perPage){
+		let urlParam = 'paging.nowPage=' +nowPage +
+  		'&paging.perPage=' + perPage +
+  		'&orderby.field=reg_date' +
+  		'&orderby.sorting='+sortType+
+  		'&channelId='+channelId;
+  		
+  		
+		let reqUrl = prefix +'/api/channel/get_channel_reviews.do?'+urlParam;
+		
+		$.ajax({
+	        url: reqUrl,
+	        type:'get',
+	        success:function(data){
+	        	log(data);
+	        	if(data['error_message'] == null){
+	        		currentPage = nowPage;
+	        		printRecentReviews(data['list']);
+	        	} else{
+	    			alert(getErrorMsg(data['state']));
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	function printRecentReviews(list){
+		let appendLi = contentInfoListToLi(list);
+
+		$("#ul_recent_review_list").append(appendLi);
+
+
+		if(list.length < 10){
+			moreJobResult = false;
+		}
+	}
+	
+	function changeListType(type){
+		if(listType == type){
+			return;
+		} else {
+			listType = type;
+		}
+		
+		contentClear();
+		getChannelRecentReviews(1, 20);
+	}
+	
+	function contentClear(){
+		$("#ul_review_list_card").empty();
+		$("#ul_review_list_flat").empty()
+	}
+	
+
+</script>
+<body>    
+
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a href="javascript:history.back()" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail" th:text="#{channel.recent_content}">최신 등록</h1>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <div class="list_wrap">
+
+                    <div class="list_wrap_line">
+ 
+                    <!-- <!-- S:List Flat -->
+                    <ul id="ul_recent_review_list" class="list_type_flat">       
+	                    <th:block th:each="item: ${reviewList}">
+	                    	<th:block th:replace="/common/item_content.html"></th:block>
+	                    </th:block>                                     
+                  	</ul> -->
+
+                    </div>
+
+                </div>
+
+            </div>
+            
+        </div>
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

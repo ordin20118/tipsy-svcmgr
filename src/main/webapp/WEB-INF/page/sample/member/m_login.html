@@ -1,0 +1,251 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+
+<script type="text/javascript" th:src="@{/js/scrypt.js}"></script>
+<script type="text/javascript" th:src="@{/js/thirdparty/buffer.js}"></script>
+<script type="text/javascript" th:src="@{/js/thirdparty/setImmediate.js}"></script>
+<script type="text/javascript" th:src="@{/js/thirdparty/unorm.js}"></script>
+
+<script>
+
+	const NOT_CERTIFIED_USER = 40009;
+	
+	var referrer;	
+	var autoLogin = false;
+	
+	$(document).ready(function() {
+	
+		log("[login.jsp - document.ready]");
+		
+		$('#ac_remember').change(function() {
+			log($('#ac_remember').is(":checked"));
+			if($('#ac_remember').is(":checked") == true) {
+				
+				autoLogin = true;
+			} else if(($('#ac_remember').is(":checked") == false)) {
+				autoLogin = false;
+			}
+		});
+		
+		
+		
+		$('.oauth_n').click(function() {
+			log("[네이버 로그인 클릭]");
+		});
+		$('.oauth_k').click(function() {
+			log("[카카오 로그인 클릭]");
+		});
+		$('.oauth_g').click(function() {
+			log("[구글 로그인 클릭]");
+		});
+		$('.oauth_f').click(function() {
+			log("[페북 로그인 클릭]");
+		});
+		
+		log(document.referrer);
+		
+		
+	});
+	
+	function loginBtn() {		
+		let id = $('#input_id').val();
+					
+		let reqJsonStr = {
+				loginId  : id
+		}
+		
+		let url = prefix + "/api/login/check_id.do";
+		log("Request URL["+url+"]");
+		
+		$.ajax({
+	        url: url,
+	        type:'post',
+	        data: reqJsonStr,
+	        success:function(data){
+	        	//log("[check id result]");
+	        	//log(data);
+	   
+	        	// 솔트 값을 수신
+	        	if(data['state'] == STATE_SUCCESS){
+	        		let salt = data['data'];
+					let inputPw = $('#input_pw').val();
+	        		
+	        		login(id, inputPw, salt);
+				} else {
+					alertErrorMessage(data['error_message']);
+				}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	
+	function login(id, pw, salt) {
+				
+		var password = new buffer.SlowBuffer(pw.normalize('NFKC'));
+	    var bufferedSalt = new buffer.SlowBuffer(salt.normalize('NFKC'));
+
+	    var N = 8192;
+	 	var r = 8
+	    var p = 1;
+	    var dkLen = 32;
+	
+	    var digest = scrypt(password, bufferedSalt, N, r, p, dkLen, function(error, progress, key) {
+	    	if (error) {
+	            log("Error: " + error);
+	          	alert(/*[[#{error.scrypt}]]*/);
+	        } else if (key) {
+	          
+	        	log("[key]:"+key);
+	          	log("[toHexString]:" + toHexString(key));
+	          	log("[hash + salt]:" + toHexString(key) + salt);
+	          	var digest = toHexString(key) + salt;
+	
+	        	reqJsonStr = {
+	        			loginId : id,
+	        			password : digest,
+	        			autoLogin : autoLogin
+	        	}
+	        	
+	        	requestLogin(reqJsonStr);
+	        } 
+	   	});
+	          
+	}
+	
+	
+	function requestLogin(reqData){
+		
+		var url = prefix + "/api/login/login.do";
+		log(reqData);
+		
+		$.ajax({
+	        url: url,
+	        type:'post',
+	        data: reqData,
+	        success:function(data){
+	        	log("[login result]");
+	        	log(data);
+	        	
+	        	if(data['state'] == STATE_SUCCESS){
+	        		if(document.referrer == ""){
+	        			location.href = prefix;
+	        		} else {
+	        			location.href = document.referrer;
+	        		}
+				} else {
+					
+					if(data['state'] == NOT_CERTIFIED_USER){
+						//loginId encoding 필요
+						location.href = prefix + "/m/login/login_not_certify.do?id="+reqData['loginId'];
+					} else {
+						alertErrorMessage(data['error_message']);
+					}
+					
+					
+				}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+		
+	}
+	
+	
+	
+	function toHexString (byteArray) {
+		  //const chars = new Buffer(byteArray.length * 2);
+		  const chars = new Uint8Array(byteArray.length * 2);
+		  const alpha = 'a'.charCodeAt(0) - 10;
+		  const digit = '0'.charCodeAt(0);
+	
+		  let p = 0;
+		  for (let i = 0; i < byteArray.length; i++) {
+		      let nibble = byteArray[i] >>> 4;
+		      chars[p++] = nibble > 9 ? nibble + alpha : nibble + digit;
+		      nibble = byteArray[i] & 0xF;
+		      chars[p++] = nibble > 9 ? nibble + alpha : nibble + digit;    
+		  }
+		  //return chars.toString('utf8');
+		  return String.fromCharCode.apply(null, chars);
+	}
+	
+	function genSaltHex() {
+		var salt = new Uint8Array(4);
+		window.crypto.getRandomValues(salt);
+		return toHexString(salt);
+	}
+	
+	function loginKeyUpEvent(){
+		if(event.keyCode == 13){
+			loginBtn();
+		}
+	}
+
+
+
+</script>
+
+<body>    
+
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a href="javascript:history.back()" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail">Login</h1>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <div class="wrap_log">
+
+                    <div class="wrap_account">
+                        <div class="wrap_input">
+                            <input id="input_id" type="text" class="input_type_n" th:placeholder="#{member.member_id}" onkeyup="loginKeyUpEvent();">
+                            <input id="input_pw" type="password" class="input_type_n" th:placeholder="#{member.member_pw}" onkeyup="loginKeyUpEvent();">
+                        </div>
+                        <div class="wrap_oauth">
+                            <a href="javascript:loginBtn();" class="btn_log auth_m">LOG IN</a>
+                        </div>
+                        <div class="wrap_account_ment wrap_account_ment1">
+                            <th:block th:text="#{member.enroll_ment1}">계정이 없으시면</th:block> <a th:href="@{/m/member_mgmt/join.do}" th:text="#{member.enroll}">회원가입</a> <th:block th:text="#{member.enroll_ment2}">해주세요.</th:block>
+                        </div>
+                        <div class="wrap_account_ment wrap_account_ment2">
+                            <input type='checkbox' class='s_checkbox' id="ac_remember"><label for="ac_remember"><em></em><th:block th:text="#{member.remember}">계정 기억하기</th:block></label>
+                        </div>
+                    </div>
+
+                    <div style="height:20px;"></div>
+
+                    <div class="line_type_common"><span>OR</span></div>
+
+                    <div style="height:10px;"></div>
+
+                    <div class="wrap_oauth">
+                        <a href="" class="btn_log oauth_n">NAVER</a>
+                        <a href="" class="btn_log oauth_k">KAKAO</a>
+                        <a href="" class="btn_log oauth_g">GOOGLE</a>
+                        <a href="" class="btn_log oauth_f">FACEBOOK</a>
+                    </div>
+                </div>
+
+            </div>
+            
+        </div>
+
+        <th:block th:replace="/common/footer.html"></th:block>
+
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

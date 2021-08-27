@@ -1,0 +1,1116 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<head>
+	<meta property="og:title" th:content="${prodName}">
+	<meta property="og:description" th:content="${prodName}">
+	<meta property="og:image" th:content="@{${imgPrefix}} + '/' + ${repImagePath} + '_600.png'">
+	<!-- Link Swiper's CSS -->
+	<link rel="stylesheet" type="text/css" th:href="@{/css/swiper.min.css}">  
+	<!-- Swiper JS -->
+	<script th:src="@{/js/swiper.min.js}"></script>
+	<script type="text/JavaScript" src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
+	<link rel="stylesheet" type="text/css" th:href="@{/css/jquerysctipttop.css}" >
+    <link rel="stylesheet" type="text/css" th:href="@{/css/jqcloud.css}">
+    <script type="text/javascript" th:src="@{/js/jqcloud-1.0.4.js}"></script>
+</head>
+
+<script th:inline="javascript">
+	const RECOMM_PROD_PER_PAGE = 4;
+	const COMMENT_PER_PAGE = 5;
+	const COMMENT_STATUS_NORMAL = 0;
+
+	var imgPrefix = /*[[ ${imgPrefix} ]]*/;
+	var kakaoKey = /*[[ ${kakaoKey} ]]*/;
+	var repImagePath = /*[[ ${repImagePath} ]]*/;
+	var prodName = /*[[ ${prodName} ]]*/;
+	var categId = /*[[ ${categId} ]]*/;
+	var lastCommId = /*[[ ${lastCommentId} ]]*/;
+	var userLoginType = /*[[ ${userLoginType} ]]*/;
+	var defLogoPath = /*[[ ${defLogoPath} ]]*/;
+	var priceStatStr = /*[[ ${priceStatStr} ]]*/;
+	var priceStat = JSON.parse(priceStatStr);
+	
+	var listType = VIEW_CARD_TYPE;
+	var prodId = null;
+	var prodImg = null;
+		
+	$(document).ready(function() {
+		
+		if(getParams("prod_id") != null) {
+			prodId = getParams("prod_id")[0];
+		}
+		log(prodId);
+		Kakao.init(kakaoKey);
+		initEvents();
+		
+		reloadRatingInfo();
+		getRecommProd(1);
+		getRelatedContent(false, 1);
+		
+		setRepProdImg();
+		
+		printPriceGraph(priceStat);
+	});
+	
+	
+	
+	function initEvents() {
+		for(let i=1; i<=5; i++) {
+			$("#pr_r0" + i).bind("click", function() {
+				$("#pr_rating01").text(i);
+				$("#pr_rating02").text(i);
+				if(pRatingInfo != null) {
+					pRatingInfo['rating'] = i;	
+				}
+				
+				
+			});
+		}
+		for(let p=1; p<=3; p++) {
+			for(let i=1; i<=5; i++) {
+				$("#pr_prop0"+p+"_r0" + i).bind("click", function() {
+					$("#pr_prop0"+p+"_val").text(i);
+					
+					if(pRatingInfo != null) {
+						pRatingInfo['prop0'+p+'_score'] = i;	
+					}
+				});
+			}	
+		}
+		
+		
+		$('#btn_write_review').bind("click", function() {goToReviewWrite();});
+		$("#btn_prod_rating").bind("click", function() {openPRatingWin();});
+	}
+	
+	function setRepProdImg(){
+		if(repImagePath == null){
+			prodImg = prefix +"/image/img_general_product_default.png";
+		} else {
+			prodImg = imgPrefix + '/' + repImagePath + "_600.png";
+		}
+	}
+	
+	function printPriceGraph(statList) {
+		if(statList != null && statList.length >= 2) {
+			$("#div_price_chart").css("display", "");	
+			window.jQuery.ChartJs.init(statList);
+			
+			let lastStat = statList[statList.length-1];
+			$("#span_price_chart_desc").html(moment(lastStat['stat_end']).format('YYYY-MM-DD HH') + "시 기준");
+		} else {
+			$("#div_price_chart").css("display", "none");
+		}
+		
+	}
+	
+	
+	
+	function pickProd() {
+		if(userLoginType == LOGIN_TYPE_TEMP) {
+			loginConfirm();
+		} else {
+			let message = /*[[#{ask.prod.pick.msg}]]*/;
+			
+			let result = confirm(message);
+			if(result){
+				//log(">>> OK!!!");
+				let url = prefix + '/api/prod/pick_prod.do?prod_id=' + prodId;
+				
+				$.ajax({
+			        url: url,
+			        type:'get',
+			        success:function(data){
+			        	log(data, 0);
+			        	if(data['state'] == STATE_SUCCESS){
+			        		
+			        		$("#btn_pick_prod").css("display", "none");
+			        	} else{
+			        		alertErrorMessage(data['error_message']);
+			    		}
+			        	
+			        },
+			        error:function(request, status, error){
+			        	
+			        	alertNetworkErr();
+			        }
+			    });
+			}
+		}				
+	}
+	
+
+	function openPRatingWin() {
+		log("openPRatingWin");
+		if(userLoginType == LOGIN_TYPE_TEMP) {
+			loginConfirm();
+		} else {
+			$("#prod_rating_win").css("display", "");
+			
+		}
+	}
+	
+	function closePRatingWin() {
+		$("#prod_rating_win").css("display", "none");
+		pRatingInfo = null;
+	}
+	
+	var pRatingInfo = {};
+	function sendProductRating() {
+		if(confirm(/*[[ #{ask.regist} ]]*/)) {
+			log(pRatingInfo);
+			pRatingInfo['prod_id'] = Number(prodId);
+			log(pRatingInfo);
+			log(prodId);
+			let reqJsonStr = JSON.stringify(pRatingInfo);
+			log(pRatingInfo);
+			let url = prefix + '/api/prod/rate.do';
+			
+			$.ajax({
+		        url: url,
+		        type:'post',
+		        data: reqJsonStr,
+		        contentType:"application/json",
+		        success:function(data){
+		        	log(data);
+		        	if(data['state'] == STATE_SUCCESS) {
+		        		closePRatingWin()
+		        		alert(/*[[ #{info.regist.ok} ]]*/);
+		        		$("#btn_prod_rating").css("display", "none");
+		        		reloadRatingInfo();
+		        		
+		    		} else{
+		    			alertErrorMessage(data['error_message']);
+		    		}
+		        },
+		        error:function(request, status, error){
+		        	alertNetworkErr();
+		        }
+		    });
+		}
+	} 
+	
+	function writeComment() {
+		if(userLoginType == LOGIN_TYPE_TEMP){
+			openLayer("div_login_layer");
+		} else {
+			var comment = $("#ta_comment_content").val();
+			log("comment " + comment);
+			if(comment == null || comment.trim().length == 0) {
+				alert(/*[[#{req.write_content}]]*/);
+				return;
+			}
+			
+			if(confirm(/*[[#{ask.regist}]]*/)) {
+				let reqJson = {
+						content_id : prodId,
+						contents : comment
+				};
+				
+				let reqJsonStr = JSON.stringify(reqJson);
+				log(reqJson);
+				let url = prefix + '/api/prod/write_comment.do';
+				
+				$.ajax({
+			        url: url,
+			        type:'post',
+			        data: reqJsonStr,
+			        contentType:"application/json",
+			        success:function(data){
+			        	log(data);
+			        	if(data['state'] == STATE_SUCCESS){
+			        		$("#ta_comment_content").val('');
+			        		addComment(data['data']);
+			        	} else{
+			        		alertErrorMessage(data['error_message']);
+			    		}
+			        },
+			        error:function(request, status, error){
+			        	alertNetworkErr();
+			        }
+			    });
+			}
+		}
+		
+	}
+	function addComment(commInfo){
+		if(lastCommId == null){
+			lastCommId = commInfo['comment_id'];
+		}
+		
+		let commLi = makeCommentLi(commInfo);
+		$("#ul_comments").prepend(commLi);
+	}
+	
+	function moreComment(){
+		let urlParam = 'lastCommId='+lastCommId+
+		'&contentId='+prodId+
+		'&contentType='+TYPE_PROD+
+		'&status='+COMMENT_STATUS_NORMAL+
+		'&paging.perPage='+COMMENT_PER_PAGE+
+		'&orderby.field=reg_date' +
+  		'&orderby.sorting='+SORT_TYPE_DESC;
+		
+		log("URL PARAMETER : ["+urlParam+"]");
+	
+		let url = prefix + '/api/review/more_comments.do?'+urlParam;
+		$.ajax({
+	        url: url,
+	        type:'get',
+	        success:function(data){
+	        	log("[comments]");
+	        	log(data);
+	        	
+	        	if(data['state'] == STATE_SUCCESS){
+	        		printMoreComment(data['list']);
+	    		} else {
+	    			alertErrorMessage(data['error_message'], true);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	function printMoreComment(commList){
+		let listSize = commList.length;
+		if(listSize < COMMENT_PER_PAGE){
+			$("#comment_more").css("display","none");
+		}
+		if(listSize > 0){
+			lastCommId = commList[listSize - 1]['comment_id'];
+			let commentList = makeCommentList(commList);
+			$("#ul_comments").append(commentList);
+		}		
+	}
+	
+	
+	
+	function printProductDetailRating(data) {
+		//Rating 관련...
+		let rating = data['rating_summary'];
+		let rateVoter = rating['voter'];
+		let starImg = avgRateToImg('rate_starb', rating['avg_rating']);
+		let ratingInfo = '' +
+		'<div class="pd_rate_star">'+
+	    '    <em>'+rating['avg_rating'].toFixed(1)+'</em> <span class="rate_star '+starImg+'"></span>'+
+	    '</div>';
+	    $("#div_rating_info").empty();
+		$("#div_rating_info").append(ratingInfo);
+		
+		
+		$("#pdRateNum").html(rateVoter+'명이 평가하였습니다.');
+		
+		
+		$("#rating_graph01").empty();
+		for(let i=5; i>=1; i--){
+				
+			let pct = rating['rating'+i+'_pct'];
+				
+			let div = ''+
+			'<div class="rate_num">'+
+	        '    <span class="rnum">'+i+'점</span>'+
+	        '    <span class="rbar"><em style="width:'+pct.toFixed(0)+'%;"></em></span>'+
+	        '    <span class="rrate">'+pct.toFixed(0)+'%</span>'+
+	        '</div>';
+				
+			$("#rating_graph01").append(div);
+		}
+			
+		if(rating['rfactor01_pct'] == 0 && rating['rfactor02_pct'] == 0 && rating['rfactor03_pct'] == 0) {
+			$("#div_rating_graph02").css("display", "none");
+		} else {
+			$("#div_rating_graph02").css("display", "");
+			$("#rating_graph02").empty();
+			$("#rating_graph02").append('<span class="r_type type_1" style="width:'+rating['rfactor01_pct']+'%;">'+rating['rfactor01_pct'].toFixed(0)+'%<em>성능/기능</em></span>');
+			$("#rating_graph02").append('<span class="r_type type_2" style="width:'+rating['rfactor02_pct']+'%;">'+rating['rfactor02_pct'].toFixed(0)+'%<em>외관/크기</em></span>');
+			$("#rating_graph02").append('<span class="r_type type_3" style="width:'+rating['rfactor03_pct']+'%;">'+rating['rfactor03_pct'].toFixed(0)+'%<em>가격</em></span>');
+		}
+		
+		
+	}
+	
+	/* function printSpecTable(specObj){
+		
+		let group = specObj['group'];
+		$("#tbody_prod_spec").append('<tr><td class="group" colspan="4">'+group+'</td></tr>');
+
+		let specs = specObj['specs'];
+		let specsArr = [];
+		for(let key in specs) {
+			specsArr.push({'k' : key, 'v' : specs[key]
+			});
+		}
+		if(specsArr.length%2 ==1) {
+			specsArr.push({'k' : '', 'v' : '' });
+		}
+		
+		
+		for(let i=0; i<specsArr.length; i=i+2) {
+			let tr = ''+
+			'<tr>'+
+	        '    <th scope="row" class="tit">'+specsArr[i]['k']+'</th>'+
+	        '    <td class="dsc">'+specsArr[i]['v']+'</td>'+
+	        '    <th scope="row" class="tit">'+specsArr[i+1]['k']+'</th>'+
+	        '    <td class="dsc">'+specsArr[i+1]['v']+'</td>'+
+	        '</tr>';
+			$("#tbody_prod_spec").append(tr);
+		}
+	} */
+	
+
+	function getRecommProd(nowPage) {		
+		let urlParam = 'paging.nowPage=' + nowPage + 
+    	'&categId='+ categId +
+    	'&selProdId=' + prodId +
+    	'&paging.perPage=' + RECOMM_PROD_PER_PAGE;
+		
+		let url = prefix + '/api/recomm/get_contents.do?' + urlParam;
+		
+		$.ajax({
+	        url: url,
+	        type:'get',
+	        success:function(data){
+	        	log("[Recomm Prod]", 0);
+	        	log(data, 0);
+	        	if(data['state'] == STATE_SUCCESS) {
+	        		printRecommProd(nowPage, data['list']);
+	    		} else{
+	    			alertErrorMessage(data['error_message'], true);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	function printRecommProd(nowPage, list) {
+		
+		let prodList = [];
+		let reviewList = [];
+		
+		
+		for(let i=0; i<list.length; i++) {
+			if(list[i]['content_info_type'] == TYPE_PROD) {
+				if(prodList.length < 4) {
+					prodList.push(list[i]);
+				} 
+				
+			} else if(
+					list[i]['content_info_type'] == TYPE_REVIEW || 
+					list[i]['content_info_type'] == TYPE_REVIEW_EXT_VIDEO || 
+					list[i]['content_info_type'] == TYPE_REVIEW_EXT_ARTICLE) {
+				
+				
+				if(reviewList.length < 4) {
+					reviewList.push(list[i]);	
+				}
+			}
+		}
+		
+		if(reviewList.length != 0) {
+			$("#ul_recomm_review_list").append(makeContentLiList(reviewList, VIEW_CARD_TYPE));
+			$("#div_recmm_review").css("display", "block");
+		} else {
+			$("#div_recmm_review").css("display", "none");
+		}
+		
+		if(prodList.length != 0) {
+			$("#ul_recomm_prod_list").append(makeContentLiList(prodList, VIEW_CARD_TYPE));
+			$("#div_recmm_prod").css("display", "block");
+		} else {
+			$("#div_recmm_prod").css("display", "none");
+		}
+	}
+	
+	function getRelatedContent() {		
+				
+		let urlParam = 'paging.nowPage=1' + 
+    	'&categId='+ categId +
+    	'&selProdId=' + prodId +
+    	'&paging.perPage=4';
+		
+		let url = prefix + '/api/recomm/get_ext_contents.do?' + urlParam;
+		
+		
+		$.ajax({
+	        url: url,
+	        type:'get',
+	        success:function(data){
+	        	if(data['state'] == STATE_SUCCESS) {
+	        		printRelatedContent(data);
+	    		} else{
+	    			alertErrorMessage(data['error_message'], true);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	function printRelatedContent(data) {
+		let list = data['list'];
+		if(list.length == 0) {
+			$("#div_relcontent_no_thumb").css("display", "none");
+			return;
+		} else {
+			$("#div_relcontent_no_thumb").css("display", "block");
+		}
+		
+		for(let i=0; i<list.length; i++) {
+			let relData = list[i];
+			let url     = relData['url'];
+			let wDate   = moment(relData['write_date']);
+            let liHtml = makeNoThumbContentLi(list[i]);
+	        
+			$("#ul_related_content_list").append(liHtml);	
+			$("#div_relcontent_" + relData['rel_id']).bind("click", function() {
+				window.open("about:blank").location.href = relData['url'];
+			});
+		}
+		
+		$("#div_related_content_more").empty();
+		
+	}
+	
+	function reloadRatingInfo() {
+		let url = prefix + '/api/prod/product_rating.do?prod_id=' + prodId;
+		//log("URL :: ["+url+"]");
+		
+		$.ajax({
+	        url: url,
+	        type:'get',
+	        success:function(data){
+	        	log("[reloadRatingInfo Result]", 0);
+	        	log(data);
+	        	if(data['state'] == STATE_SUCCESS) {
+	        		//printResult(data);	       			
+	        		printProductDetailRating(data);
+	    		} else {
+	    			alertErrorMessage(data['error_message'], true);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+
+	function contentShare(shareMedia) {
+		
+		// 먼저 공유 정보를 DB에 저장
+		var url = prefix + "/api/share/gen_share_link.do";
+		let param = {
+				content_id : prodId,
+				content_type : TYPE_PROD,
+				share_media : shareMedia
+		}
+		param = JSON.stringify(param);
+		
+		$.ajax({
+	        url: url,
+	        type:'post',
+	        data: param,
+	        contentType:"application/json",
+	        success:function(data){
+	        	if(data['state'] == STATE_SUCCESS) {
+	        		if(shareMedia == 1) {
+	        			window.open( 'http://www.facebook.com/sharer.php?u=' + encodeURIComponent(data['data']) );	
+	        			hideShareLayer();
+	        		} else {
+	        			if(prodImg == null && shareMedia == 0){
+	        				//alert("카카오톡 공유는 대표이미지가 설정되어 있어야 공유 가능합니다.");
+	        				//return;
+	        				prodImg = defLogoPath;
+	        				log("prodImg ["+prodImg+"]");
+	        			}
+	        			
+	        			let kkShareData = {
+	        				'title': prodName,
+	        				'desc' : prodName + " 자세히 보기",
+	        				'image' : prodImg,
+	        				'link' : data['data']
+	        			};
+	        			shareKakaotalk(kkShareData);
+	        			hideShareLayer();
+	        		}
+	        		
+	    		} else {
+	    			alertErrorMessage(data['error_message'], true);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	function showOption(){
+		if($("#div_option").css("display") == "none"){
+			$("#div_option").css("display","");
+		}else{
+			$("#div_option").css("display","none");
+		}		
+	}
+	
+	function showShareLayer(){
+		log("[showShareLayer()]", 0);
+		$("#div_share_layer").css("display","");
+	}
+	function hideShareLayer(){
+		log("[showShareLayer()]", 0);
+		$("#div_share_layer").css("display","none");
+	}
+	
+
+	function goToReviewWrite() {
+		if(userLoginType == LOGIN_TYPE_TEMP) {
+			loginConfirm();
+		} else {
+			window.location.href = prefix + "/m/review/write_page.do?prodId="+prodId;
+		}
+	}
+
+	function changeListType(type){
+		
+		log("[changeListYpe()]"+type);
+		
+		listType = type;		
+		
+		log("[listType]:"+listType);
+		
+		$("#ul_recomm_content_list").empty();
+		$('#div_sel_type').empty();
+		if(listType == VIEW_CARD_TYPE) {
+			$("#ul_recomm_content_list").attr("class","list_type_card");
+			let typeBtn = ' <a href="javascript:changeListType(1)" id="selTypeBtn" class="vf_type_flat"></a>';
+			$('#div_sel_type').append(typeBtn);			
+		} else if(listType == VIEW_FLAT_TYPE) {
+			$("#ul_recomm_content_list").attr("class","list_type_flat");
+			let typeBtn = ' <a href="javascript:changeListType(0)" id="selTypeBtn" class="vf_type_card"></a>';
+			$('#div_sel_type').append(typeBtn);
+		} else {}
+		
+		getRecommProd(1);
+		
+	}
+	
+	
+	function reportContent() {
+		window.location.href = prefix + "/m/report.do?contentType="+TYPE_PROD+"&contentId="+prodId;
+	}
+	
+	function loginConfirm(){
+		$("#div_login_layer").css("display","");
+		
+	}
+	
+	function hideLoginConfirm() {
+		$("#div_login_layer").css("display","done");
+	}
+</script>
+<body>    
+
+    <!-- 공유 레이어 -->
+    <div id="div_share_layer" class="wrap_layer" style="display: none;">
+        <div class="wrap_box">
+            <div class="layer_close"><span class="layer_off"></span></div>
+            <div class="layer_box">
+                <p class="ch_tit" style="text-align:left;"><strong>공유</strong> 하기</p>
+                <div class="wrap_log">
+
+                    <div style="height:10px;"></div>
+
+                    <div class="wrap_oauth">
+                        <a href="javascript:contentShare(0)" class="btn_log oauth_k">KAKAO</a>
+                        <a href="javascript:contentShare(1)" class="btn_log oauth_f">FACEBOOK</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="wrap_dimmed"></div>
+    </div>
+    <!-- S:Layer 로그인 -->
+    <div id="div_login_layer" class="wrap_layer" style="display: none;">
+
+        <!-- 해당 Div만 각 레이어에 사용하면 된다. -->
+        <div class="wrap_box">
+            <div class="layer_close"><span class="layer_off"></span></div>
+            <div class="layer_box">
+                <p class="ch_tit" style="text-align:center;border:none;"><strong th:text="#{common.login}">로그인</strong><th:block th:text="#{common.msg.need}">이 필요합니다.</th:block></p>
+            </div>
+            <div class="btn">
+                <a class="btn_type_bg btn_type_gray_none_fill layer_off" th:text="#{btn.close}">취소</a>
+                <a th:href="@{/m/login_page.do}"class="btn_type_bg btn_type_orange_fill layer_off" th:text="#{common.login}">로그인</a>
+            </div>
+        </div>
+        
+        <div class="wrap_dimmed"></div>
+    </div>
+	<!-- 제품 평가 레이어 -->
+    <div id="prod_rating_win" class="wrap_layer" style="display: none;">
+		
+		<div class="wrap_box">
+	        <div class="layer_close"><span class="layer_off"></span></div>
+	        <div class="layer_box">
+	            <p class="ch_tit" style="text-align:left;"><strong>제품</strong> 평가</p>
+	            <div class="report">
+	                <h6 class="ellipsis_1" style="font-size:1rem;padding-bottom:5px;" th:text="${prod.prodInfo.prod.prodName}">여기는 제품 타이틀이 들어갑니다.여기는 제품 타이틀이 들어갑니다.</h6>
+	                <p class="prate_step">Step 01. 제품 평가 (필수)</p>
+	
+	                <!-- 평가 전에는 starRev, 평가 후에는 클래스를 starRev_finish 교체 후 평점 만큼 on 처리 -->
+	                <div class="wrap_starRev">
+	                    <div class="starRev">
+	                        <span id="pr_rating01" class="star_rate_m">1</span>
+	                        <span id="pr_r01" class="starR on"></span>
+	                        <span id="pr_r02" class="starR"></span>
+	                        <span id="pr_r03" class="starR"></span>
+	                        <span id="pr_r04" class="starR"></span>
+	                        <span id="pr_r05" class="starR"></span>
+	                    </div>
+	                    <p class="rate_ment"><strong><th:block th:text="${userNickName}"></th:block></strong>님의 별점 평가는 <strong id="pr_rating02">1</strong>입니다.</p>
+	                </div>
+	
+	                <p class="prate_step" style="margin:10px;">Step 02. 상세 평가 (선택)</p>
+	
+	                <div class="gageRev">
+	                    <span class="gage_rate">성능/기능</span>
+	                    <p style="margin-left:52px;">
+	                        <span id="pr_prop01_r01" class="gageR gageR1 on"></span>
+	                        <span id="pr_prop01_r02" class="gageR"></span>
+	                        <span id="pr_prop01_r03" class="gageR"></span>
+	                        <span id="pr_prop01_r04" class="gageR"></span>
+	                        <span id="pr_prop01_r05" class="gageR gageR2"></span>
+	                    </p>
+	                    <span id="pr_prop01_val" class="gage_rate_m">1</span>                    
+	                </div>
+	                <div class="gageRev">
+	                    <span class="gage_rate">외관/크기</span>
+	                    <p style="margin-left:52px;">
+	                        <span id="pr_prop02_r01"  class="gageR gageR1 on"></span>
+	                        <span id="pr_prop02_r02"  class="gageR"></span>
+	                        <span id="pr_prop02_r03"  class="gageR"></span>
+	                        <span id="pr_prop02_r04"  class="gageR"></span>
+	                        <span id="pr_prop02_r05"  class="gageR gageR2"></span>
+	                    </p>
+	                    <span id="pr_prop02_val" class="gage_rate_m">1</span>                    
+	                </div>
+	
+	                <div class="gageRev">
+	                    <span class="gage_rate">가격</span>
+	                    <p style="margin-left:52px;">
+	                        <span id="pr_prop03_r01" class="gageR gageR1 on"></span>
+	                        <span id="pr_prop03_r02" class="gageR"></span>
+	                        <span id="pr_prop03_r03" class="gageR"></span>
+	                        <span id="pr_prop03_r04" class="gageR"></span>
+	                        <span id="pr_prop03_r05" class="gageR gageR2"></span>
+	                    </p>
+	                    <span id="pr_prop03_val" class="gage_rate_m">1</span>                    
+	                </div>
+	
+	            </div>
+	            <div class="btn">
+	                <a href="javascript:closePRatingWin()" class="btn_type_bg btn_type_gray_none_fill" th:text="#{btn.close}">취소</a>
+	                <a href="javascript:sendProductRating()" class="btn_type_bg btn_type_orange_fill" th:text="#{btn.ok}">확인</a>
+	            </div>
+	        </div>
+	    </div>
+	    <div class="wrap_dimmed"></div>
+    </div>
+     
+    
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a href="javascript:history.go(-1)" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail">Product</h1>
+                <div class="page_action">
+                    <a href="javascript:showOption()" class="option"></a>
+                    <a href="javascript:pickProd()" id="btn_pick_prod" class="like on" th:text="#{btn.pick}" th:style="${prod.memberAct.pickCount > 0} ? 'display: none;' : ''">찜</a><!-- 담기 선택 시 on 추가 -->
+                    <a id="btn_write_review" class="write" th:text="#{btn.write.review}">리뷰작성</a>
+                    <div id="div_option" class="layer_option" style="display:none;">
+                        <a href="javascript:showShareLayer();showOption()" th:text="#{btn.share}">공유</a>
+                        <a href="javascript:reportContent();showOption()"   th:text="#{btn.report}">신고</a>
+                        <a href="javascript:showOption()" th:text="#{btn.close}">취소</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <!-- S:Category -->
+                <div class="wrap_cate_line">
+                    <!-- <span th:text="${prod.prodInfo.categDisp}"></span> -->
+                    <th:block th:each='categName, index : ${prod.prodInfo.categDisp.split(">")}'>
+                		<span th:text="${categName}">가전.TV</span>
+                		<th:block th:if="${index.index} < 2">
+                			<em></em>
+                		</th:block>
+                	</th:block>
+                    <!-- <em></em>
+                    <span>생활가전</span>
+                    <em></em>
+                    <span>냉장고</span> -->
+                </div>
+
+                <div class="basic_area">
+
+                    <div class="wrap_content_padding" >
+                       
+                        <h2 class="pd_title" th:text="${prod.prodInfo.prod.prodName}"></h2>
+
+                        <!-- Swiper -->
+                        <div class="swiper-container">
+                            <div class="swiper-wrapper">
+                            	<div class="swiper-slide" th:if="${#lists.size(prod.prodInfo.imageList) <= 0}">
+                            		<img th:src="@{/image/img_general_product_default.png}" alt="">
+                            	</div>
+                            	<th:block th:each="image : ${prod.prodInfo.imageList}">
+	                                <div class="swiper-slide" th:if="${image.imageType == 0}">
+	                                    <img th:src="@{${imgPrefix}} + '/' + ${image.imagePath} + '_300.png'" alt="">
+	                                </div>    
+                                </th:block>                        	
+                            </div>
+                            <!-- Add Pagination -->
+                            <div class="swiper-pagination"></div>
+                        </div>
+
+
+                        <!-- Initialize Swiper -->
+                        <script>
+                        var swiper = new Swiper('.swiper-container', {
+                            pagination: '.swiper-pagination',
+                            paginationClickable: true
+                        });
+                        </script>
+
+                        <div class="pd_rate" >
+                            <div class="pd_rate_box">
+                                <a id="btn_prod_rating" class="evalue" th:text="#{btn.evaluation}" th:style="${prod.memberAct.ratingCount > 0} ? 'display: none;' : ''">평가하기</a>
+                                <div id="div_rating_info">
+	                                <div class="pd_rate_star">
+	                                    <em th:text="${#numbers.formatDecimal(prod.ratingSummary.avgRating, 1, 1)}"></em> 
+	                                    <span th:attr="class='rate_star rate_starb_' + ${#numbers.formatDecimal(prod.ratingSummary.avgRating * 10, 2, 0)}"></span>
+	                                </div>
+                                </div>
+                                <div id="pdRateNum" class="pd_rate_num" th:text="#{common.eval.msg(${prod.ratingSummary.voter})}">
+                                </div>                   
+                            </div>
+                            <p class="pd_rate_ment">리뷰나라 평점과 국내외 12개 쇼핑몰의 이용자 평가 분석/제공</p>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="wrap_content_padding" style="margin-top:0;">
+
+                    <div class="ser_key_cont">
+                        <span class="latest"><em class="title_deco"></em><th:block th:text="#{prod.eval}">제품 평가</th:block></span>
+                        <span class="more_view" th:text="#{prod.eval.detail}">제품 평가 상세</span>
+                    </div> 
+
+                    <!-- //
+                    * 기본 div_box_red 상태
+                    * 확장하면 div_box_exp를 AddClass하고 축소하면 removeClass 처리한다.
+                    -->
+
+                    <div class="p_evalue div_box_com div_box_red">
+
+                        <div class="p_box">
+                            
+                            <div class="wrap_prate">
+
+                                <h4 style="margin:5px 0 10px 0;" th:text="#{prod.rating.ratio}">평점 비율</h4>
+                                <div id="rating_graph01" class="wrap_rate_num">
+                                    <div class="rate_num">
+                                        <span class="rnum" th:text="#{prord.eval.rate_val(5)}"></span>
+                                        <span class="rbar"><em th:style="'width:' + ${prod.ratingSummary.rating5Pct} +'%;'"></em></span>
+                                         <span class="rrate" th:text="${#numbers.formatDecimal(prod.ratingSummary.rating5Pct, 0, 0)} + '%'"></span>
+                                    </div>
+                                    <div class="rate_num">
+                                        <span class="rnum" th:text="#{prord.eval.rate_val(4)}"></span>
+                                        <span class="rbar"><em th:style="'width:' + ${prod.ratingSummary.rating4Pct} +'%;'"></em></span>
+                                        <span class="rrate" th:text="${#numbers.formatDecimal(prod.ratingSummary.rating4Pct, 0, 0)} + '%'"></span>
+                                    </div>
+                                    <div class="rate_num">
+                                        <span class="rnum" th:text="#{prord.eval.rate_val(3)}"></span>
+                                        <span class="rbar"><em th:style="'width:' + ${prod.ratingSummary.rating3Pct} +'%;'"></em></span>
+                                        <span class="rrate" th:text="${#numbers.formatDecimal(prod.ratingSummary.rating3Pct, 0, 0)} + '%'"></span>
+                                    </div>
+                                    <div class="rate_num">
+                                        <span class="rnum" th:text="#{prord.eval.rate_val(2)}"></span>
+                                       	<span class="rbar"><em th:style="'width:' + ${prod.ratingSummary.rating2Pct} +'%;'"></em></span>
+                                        <span class="rrate" th:text="${#numbers.formatDecimal(prod.ratingSummary.rating2Pct, 0, 0)} + '%'"></span>
+                                    </div>
+                                    <div class="rate_num">
+                                        <span class="rnum" th:text="#{prord.eval.rate_val(1)}"></span>
+                                        <span class="rbar"><em th:style="'width:' + ${prod.ratingSummary.rating1Pct} +'%;'"></em></span>
+                                        <span class="rrate" th:text="${#numbers.formatDecimal(prod.ratingSummary.rating1Pct, 0, 0)} + '%'"></span>
+                                    </div>
+    
+                                </div>
+                                
+                                
+                                
+                               <!--  <th:blkock th:if="${prod.ratingSummary.rFactor01Pct > 0 || prod.ratingSummary.rFactor02Pct > 0 || prod.ratingSummary.rFactor03Pct > 0}">
+	                                <h4 style="margin:25px 0 15px 0;">평가 구성</h4>
+	    
+	                                <div class="wrap_bar">
+	                                    <span class="r_type type_1" th:text="${#numbers.formatDecimal(prod.ratingSummary.rFactor01Pct, 0, 0)} + '%'" th:style="'width:' + ${prod.ratingSummary.rFactor01Pct} +'%;'"><em>성능/기능</em></span>
+	                                    <span class="r_type type_2" th:text="${#numbers.formatDecimal(prod.ratingSummary.rFactor02Pct, 0, 0)} + '%'" th:style="'width:' + ${prod.ratingSummary.rFactor02Pct} +'%;'"><em>외관/크기</em></span>
+	                                    <span class="r_type type_3" th:text="${#numbers.formatDecimal(prod.ratingSummary.rFactor03Pct, 0, 0)} + '%'" th:style="'width:' + ${prod.ratingSummary.rFactor03Pct} +'%;'"><em>가격</em></span>
+	                                </div>
+                                </th:blkock> -->
+                                
+                                <div id="div_rating_graph02" style="display: none;">
+	                                <h4 style="margin:25px 0 15px 0;" th:text="#{prod.eval.composition}"></h4>
+		    
+	                                <div id="rating_graph02" class="wrap_bar">
+	                                    <span class="r_type type_1" th:text="#{prod.eval.function}"><em></em></span>
+	                                    <span class="r_type type_2" th:text="#{prod.eval.appearance}"><em></em></span>
+	                                    <span class="r_type type_3" th:text="#{prod.eval.price}"><em></em></span>
+	                                </div>
+                                </div>
+    
+    
+    							<th:block th:if="${prod.anaReview} != null">
+	                                <h4 style="margin:85px 0 15px 0;">평가 분석</h4>
+	
+	                                <ul class="mydata_now1">
+	                                    <li th:each="score : ${prod.scoreList()}">
+	                                        <a href="">
+	                                            <span class="tit" th:text="${score.keyword}"></span>
+	                                            
+	                                            <p class="num" th:text="${#numbers.formatDecimal(score.polNor, 0, 0)} + '%'"></p>
+	                                           	<p class="word">
+	                                           		<th:block th:each="word, iterStat : ${prod.anaTopWord(score.keywordCode)}">
+		                                           		<th:block th:text="!${iterStat.last} ? ${word}+',' : ${word}">
+		                                           		</th:block>
+	                                           		</th:block>
+	                                           	</p>                               
+	                                        </a>
+	                                    </li>
+	                                </ul>
+								</th:block>
+								
+                                <h4 style="margin:30px 0 15px 0;" th:text="#{prod.comment}">제품 한마디</h4>
+
+                                <div class="wrap_pment" style="margin:10px 0;">
+                                    <textarea rows="5" cols="auto" id="ta_comment_content" class="i_textarea input_type_n comment"></textarea>
+                                    <a href="javascript:writeComment()" class="btn_type_sm btn_type_gray_fill" th:text="#{btn.register}">등록</a>
+                                </div>
+                                
+								<ul id="ul_comments" class="ullist_type_product_land">
+		                        <th:block th:each="comment : ${commentInfo}">
+		                        	<li th:id="|li_comment_${comment.commentId}|">                                
+	                                    <div class="list_type_product_land">
+	                                        <th:block th:if="${comment.profileImagePath} == null">
+						                		<div class="profile"><img th:src="@{/image/img_general_profile_default.png}" alt=""></div>
+						                	</th:block>
+						                    <th:block th:if="${comment.profileImagePath} != null">
+						                    	<div class="profile"><img th:src="|${imgPrefix}/${comment.profileImagePath}_300.png|" alt=""></div>
+						                    </th:block>
+	                                        <div class="text">
+	                                            <p class="title ellipsis_1" th:text="${comment.nickName}">둥이아빠</p>
+	                                            <p class="date" th:text="${#calendars.format(comment.regDate,'YYYY.MM.dd')}">2020.01.01</p>
+	                                        </div>                                    
+	                                    </div>
+	                                    <div class="desc menty" th:text="${comment.contents}">
+	                                        와 ~ 진짜 최고의 가성비를 자랑하는 태블릿입니다.와 ~ 진짜 최고의 가성비를 자랑하는 태블릿입니다.와 ~ 진짜 최고의 가성비를 자랑하는 태블릿입니다.와 ~ 진짜 최고의 가성비를 자랑하는 태블릿입니다.와 ~ 진짜 최고의 가성비를 자랑하는 태블릿입니다.
+	                                    </div>
+	                                    <div class="prd_line" th:if="${comment.myComment == true}" th:onclick="|delComment(${comment.commentId})|">
+	                                        <p style="text-align: center;">삭제</p>
+	                                    </div>
+	                                </li>
+		                        </ul>
+		                        </th:block>
+		                        <th:block th:if="${#lists.size(commentInfo) > 4}">
+		                        	<a id="comment_more" href="javascript:moreComment()" class="list_more" th:text="#{btn.more_plus}">더보기 +</a>
+		                        </th:block>
+                            </div>                            
+
+                        </div>
+
+                    </div>
+                    <div class="div_exp_1">
+                        <div class="gra"></div>
+                        <em></em><th:block th:text="#{prod.eval.more}">제품 평가 더보기</th:block><em></em>
+                    </div>
+                    <div class="div_red_1"><em></em><th:block th:text="#{prod.eval.close}">제품 평가 닫기</th:block><em></em></div>
+
+                    <div class="ser_key_cont">
+                        <span class="latest" th:text="#{prod.info}"><em class="title_deco"></em>제품 정보</span>
+                    </div> 
+
+                    <!-- //
+                    * 기본 div_box_red 상태
+                    * 확장하면 div_box_exp를 AddClass하고 축소하면 removeClass 처리한다.
+                    -->
+                    <div class="p_intro div_box_com div_box_red">
+
+                        <div class="p_box">
+                            <div class="wrap_prate">
+                                
+                                <!-- 제품 대표 이미지 -->
+	                            <th:block th:each="image : ${prod.prodInfo.imageList}">
+	                                <div th:if="${image.imageType == 0}">
+	                                    <img th:src="@{${imgPrefix}} + '/' + ${image.imagePath} + '_600.png'" alt="">
+	                                </div>    
+                                </th:block> 
+
+                                <table class="spec_tbl">
+                                <colgroup>
+                                    <col class="tit">
+                                    <col class="dsc">
+                                    <col class="tit">
+                                    <col class="dsc">
+                                </colgroup>
+                                <tbody th:each="specInfo, i : ${spec}">
+                                	<tr>
+                                		<td class="group" colspan="4" th:text="${specInfo.group}"></td>
+                               
+                                	</tr>
+                                	<th:block th:each="specs, i : ${specInfo.spec}">
+	                                	<th:block th:if="${i.index % 2 == 0}">
+	                                		<tr>
+	                                	</th:block>
+	                                		<th scope="row" class="tit" th:text="${specs.key}">화면크기(인치)</th>
+		                                    <td class="dsc" th:text="${specs.value}">25.65㎝(10.1인치)</td>
+										<th:block th:if="${i.index % 2 == 1}">
+	                                		</tr>
+	                                	</th:block>
+		                                    
+	                                	
+                                	</th:block>
+                                </tbody>
+                                </table>
+                                
+                                <!-- 제품 제조사 제공 이미지 -->
+	                            <th:block th:each="image : ${prod.prodInfo.imageList}">
+	                                <div th:if="${image.imageType == 2}">
+	                                    <img th:src="@{${imgPrefix}} + '/' + ${image.imagePath} + '_600.png'" alt="">
+	                                </div>    
+                                </th:block> 
+								
+								<div id="div_price_chart" style="display: none">
+	                                <h4 style="margin:30px 0 15px 0;">
+	                                    <th:block th:text="#{prod.lowprice.graph}">최저가 추이</th:block>
+	                                    <span id="span_price_chart_desc" class="time"></span>
+	                                </h4>
+	        
+	                                <div class="pd_date" style="height: 150px;">
+	                                    <canvas id="line-chart"></canvas>
+	                                </div>
+                                </div>
+                                
+                                <div th:if="${#lists.size(prod.priceSummary.lowestPrices) > 0}">
+	                                <h4 style="margin:30px 0 15px 0;">
+	                                    <th:block th:text="#{prod.lowprice}">최저가 정보</th:block>
+	                                    <span class="time" th:text="${#dates.format(prod.priceSummary.latestUpdated, 'yyyy.MM.dd HH시 기준')}"></span>
+	                                </h4>
+	        						
+	                                <ul class="pd_price">                                
+	                                	<th:block th:each="price : ${prod.priceSummary.lowestPrices}">
+	                                	<li>
+	                                        <a th:href="${price.link}">                                         	
+	                                            <span class="mlogo"><img th:src="@{${imgPrefix}} + '/' + ${price.mallImagePath} + '_300.png'" alt=""></span>  
+	                                            <th:block><span class="mprice" th:if="${price.currency.equals('KRW')}">원</span></th:block>
+	                                            <span class="mprice" th:text="${#numbers.formatDecimal(price.price, 3, 'COMMA', 0, 'POINT')}"></span>                                            
+	                                        </a>
+	                                    </li>
+	                                    </th:block>                                
+	                                </ul>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                    <div class="div_exp_2">
+                        <div class="gra"></div>
+                        <em></em><th:block th:text="#{prod.info.more}">제품 정보 더보기</th:block><em></em>
+                    </div>
+                    <div class="div_red_2" th:utext="|<em></em>#{prod.info.close}|">제품 정보 닫기<em></em></div>
+
+					<!-- 
+                    <div class="ser_key_cont">
+                        <span class="latest" th:text="#{common.recommended_content}"><em class="title_deco"></em></span>
+                    </div> 
+					-->
+					
+					
+					<div id="div_recmm_review" style="display: none">
+						<div class="ser_key_cont">
+	                        <span class="latest" th:text="${prod.prodInfo.prod.prodName} + '의 리뷰'"><em class="title_deco"></em></span>
+	                    </div> 
+						<a th:href="@{/m/prod/prod_recomm.do} + '?recomm_type=review&prod_id=' + ${prod.prodInfo.prod.prodId}" class="more_btn" th:text="#{btn.more}">더보기<em></em></a>
+	                    
+	                   
+	
+	                    <!-- S:List Card -->
+	                    <ul id="ul_recomm_review_list" class="list_type_card">
+	                    </ul>
+                    </div>
+                    
+                    <div id="div_recmm_prod" style="display: none">
+	                    <div class="ser_key_cont">
+	                        <span class="latest" th:text="${prod.prodInfo.prod.prodName} + '의 추천/유사 제품'"><em class="title_deco"></em></span>
+	                    </div> 
+						<a th:href="@{/m/prod/prod_recomm.do} + '?recomm_type=prod&prod_id=' + ${prod.prodInfo.prod.prodId}" class="more_btn" th:text="#{btn.more}">더보기<em></em></a>
+	                    <!-- S:List Card -->
+	                    <ul id="ul_recomm_prod_list" class="list_type_card">
+	                    </ul>
+                    
+                    </div>
+                    
+
+					<div id="div_relcontent_no_thumb" style="display: none">
+						<div class="ser_key_cont">
+	                        <span class="latest" th:utext="|<em class='title_deco'></em>#{common.blog_news}|">블로그/뉴스</span>
+	                    </div> 
+	                    <a th:href="@{/m/prod/prod_recomm.do} + '?recomm_type=review_nothumb&prod_id=' + ${prod.prodInfo.prod.prodId}" class="more_btn" th:text="#{btn.more}">더보기<em></em></a>
+	                    
+	
+	                    <div id ="div_related_content">
+		                    <ul id="ul_related_content_list" class="list_type_flat_noimg">
+		                    </ul>
+					
+		                    <div id="div_related_content_more">
+							
+							</div> 
+						</div>
+					</div>					
+                    
+					
+                </div>
+
+            </div>
+            
+        </div>
+        <!-- bottom_menu -->
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+    <!-- third party js -->
+    <script th:src="@{/js/Chart.bundle.min.js}"></script>
+    <!-- third party js ends -->
+
+    <!-- demo app -->
+    <script th:src="@{/js/tom.chartjs_price_stat.js}"></script>
+    <!-- end demo js-->
+
+</body>
+
+</html>

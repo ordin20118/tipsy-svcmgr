@@ -1,0 +1,86 @@
+<script type="text/javascript">	
+	var prevKeyword = null;
+</script>
+        	<div id="div_search_popup" style="display: none">
+		        <div id="div_keyword_input" class="head_wrap">
+		            <a href="javascript:showSearchPopup(false);" class="btn_back"></a>
+		            <div class="search_wrap" style="margin:2px 55px 0 50px;">
+		                <input id="keyword" type="text" value="" class="search_input input_type" onkeydown="pressKeyword()" autocomplete="off">
+		                <a href="javascript:resetSearchKeyword()" class="btn_reset"></a>
+		                <a href="javascript:searchBtn($('#keyword').val())" class="btn_search"></a>
+		            </div>
+		        </div>
+	        
+	        	<div class="wrap_content">
+	                <div class="wrap_content_padding">
+		                <ul id="ul_word_suggest" class="ser_key_history" style="margin-top:10px; display: none" > 
+	                 	
+	                 	    
+	                	</ul>
+	        			<div id="div_recent_search_words">
+	                    	<div class="ser_key_cont">
+		                        <span class="latest"><em class="title_deco"></em><th:block th:text="#{search.recent_keyword}">최근 검색어</th:block></span>
+		                        <a href="javascript:deleteRecentSearchWord()" class="alldel" th:text="#{common.all_delete}">전체 삭제</a>
+		                    </div>
+		                    
+		                    
+		                     <th:block if="${recentKeywords} != null and ${recentKeywords.size()} != 0">
+			                 	<ul id="ul_recent_keywords" class="ser_key_history">
+			                 		<th:block th:each="rKeyword: ${recentKeywords}">
+			                 			<li>
+							                <a th:href="@{/m/search/search.do} + '?keyword=' + ${rKeyword.keyword}" th:id="'recw_'+ ${rKeyword.shistId}" class="ser_key"><i></i><th:block th:text="${rKeyword.keyword}"/></a>
+							                <a th:href="|javascript:deleteRecentSearchWord('${rKeyword.shistId}')|" class="ser_date" th:text="${#dates.format(rKeyword.searchDate, 'yyyy.MM.dd')}"><em class="del"></em></a>
+							            </li>
+			                 		</th:block>
+		                    	</ul>
+		                    	
+		                    	<div id="div_no_recent_keywords" class="ser_key_none" style="display: none">
+			                        <th:block th:text="#{search.no_recent_keyword}">최근 검색어가 없습니다.</th:block>
+			                    </div>
+			                </th:block>
+			                
+			                <th:block if="${recentKeywords.empty()}">
+				                <div id="div_no_recent_keywords" class="ser_key_none" style="display: none">
+			                        <th:block th:text="#{search.no_recent_keyword}">최근 검색어가 없습니다.</th:block>
+			                    </div>
+			                </th:block>
+		               </div>
+		               
+		               <div id="div_pop_search_words">
+		                    <div style="border-top:1px solid #eee;margin:20px 0 10px 0;"></div>
+		                    <th:block th:if="${searchStatDto} != null">
+			                    <div class="ser_key_cont">
+			                        <span class="latest"><em class="title_deco"></em><th:block th:text="#{search.pop_keyword}">인기 검색어</th:block></span>
+			                        <span class="period" th:text="${#dates.format(searchStatDto.statBegin, 'yyyy-MM-dd') + ' ~ ' + #dates.format(searchStatDto.statEnd, 'MM-dd')}"></span>
+			                    </div>
+		                    </th:block>
+		                    
+		                    
+		                    <ol class="ser_key_hot">
+		                    
+		                    	<th:block th:each="popKeyword: ${popularKeywords}">
+			                        <li>
+			                            <a th:href="@{/m/search/search.do} + '?keyword=' + ${popKeyword.keyword}">
+			                                <span class="ser_num" th:text="${popKeyword.rank}"></span>
+			                                <span class="ser_key" th:text="${popKeyword.keyword}">검색어</span>
+			                                <th:block th:if="${popKeyword.prevRank} == null">
+			                                	<span class="ser_updown ser_new">NEW</span>
+			                                </th:block>
+			                                <th:block th:if="${popKeyword.prevRank} != null and ${popKeyword.rank} == ${popKeyword.prevRank}">
+			                                	<span class="ser_updown ser_u">-</span>
+			                                </th:block>
+			                                <th:block th:if="${popKeyword.prevRank} != null and ${popKeyword.rank} > ${popKeyword.prevRank}">
+			                                	<span class="ser_updown ser_down"><em></em><span th:text="${T(Math).abs(popKeyword.rank - popKeyword.prevRank)}"></span></span>
+			                                </th:block>
+			                                
+			                                <th:block th:if="${popKeyword.prevRank} != null and ${popKeyword.rank} < ${popKeyword.prevRank}">
+			                                	<span class="ser_updown ser_up"><em></em><span th:text="${T(Math).abs(popKeyword.rank - popKeyword.prevRank)}"></span></span>
+			                                </th:block>
+			                            </a>
+			                        </li>
+		                        </th:block>
+		                    </ol>
+	                    </div>
+	                </div>
+	            </div>
+            </div>

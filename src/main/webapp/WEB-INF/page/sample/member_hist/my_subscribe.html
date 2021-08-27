@@ -1,0 +1,285 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<script th:inline="javascript">
+
+	const STATUS_UNSUBSCRIBED = 0;
+	const STATUS_SUBSCRIBE = 1;
+
+	
+	let filterType = 0;
+	let sortType = SORT_TYPE_DESC;
+	let moreJobResult = true;
+	let currentPage = 1;
+	let dataCnt = /*[[${histSize}]]*/;
+	$(document).ready(function(){
+	
+		jQuery(window).scroll(function() {
+			if (jQuery(window).scrollTop() >= jQuery(document).height() - jQuery(window).height()) {
+				if(moreJobResult && dataCnt < 100) {
+					getSubscribeHist(currentPage+1, 20);
+		    	}
+			}
+		});	
+	})
+
+	
+	function getSubscribeHist(nowPage, perPage){
+		let urlParam = 'paging.nowPage=' +nowPage +
+  		'&paging.perPage=' + perPage +
+  		'&orderby.field=reg_date' +
+  		'&orderby.sorting='+sortType;
+  		if(filterType != null){
+  			urlParam += '&filterType='+filterType;
+  		}
+  		
+		let reqUrl = prefix +'/api/member_info/get_subscribe_hist.do?'+urlParam;
+		
+		$.ajax({
+	        url: reqUrl,
+	        type:'get',
+	        success:function(data){
+	        	log(data);
+	        	if(data['state'] == STATE_SUCCESS){
+	        		currentPage = nowPage;
+	        		printSubsHistory(data['list'],data['data']);
+	        	} else{
+	        		alertErrorMessage(data['error_message']);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	function printSubsHistory(list, chId){
+		let appendLi = makeSubsAppendLi(list,chId);
+		
+		$("#ul_subs_history").append(appendLi);
+		
+		dataCnt += list.length;
+		if(list.length < 20){
+			moreJobResult = false;
+		}
+	}
+	
+	function makeSubsAppendLi(list, chId){
+		let appendLi = "";
+		if(list.length > 0){
+			for(let i=0; i<list.length; i++){
+				appendLi += makeSubscribeLi(list[i], chId);
+			}
+		}
+		return appendLi;
+	}
+	
+	function makeSubscribeLi(data, chId){
+		let channel = data['channel_info'];
+		let history = data['subs_history'];
+		let subscriber = data['subscriber_info'];
+		
+		let regDate = "-";
+		if(history['reg_date'] != null){
+			regDate = moment(history['reg_date']).format('YYYY.MM.DD HH:mm');
+		}
+		
+		let state = '-';
+		let type = 'type1';
+		let ment = '-';
+		
+		let is= /*[[#{member.is}]]*/
+		let wordSubscribe = /*[[#{member.subs.subscribe}]]*/;
+		let wordUnsubscribe = /*[[#{member.subs.word_unsubs}]]*/;
+		if(history['status'] == STATUS_UNSUBSCRIBED){
+			state = /*[[#{member.subs.unsubscribe}]]*/;
+			type = 'type1';
+			ment = subscriber['nick_name']+is+ channel['ch_name']+/*[[#{member.subs.append_unsubs}]]*/;
+		} else {
+			if(channel['channel_id'] == chId){
+				state = /*[[#{member.subs.subscribed}]]*/;
+				type = 'type2';
+				
+			} else {
+				state = /*[[#{member.subs.subscribe}]]*/;
+				type = 'type1';
+			}
+			
+			ment = subscriber['nick_name']+is+ channel['ch_name']+/*[[#{member.subs.append_subs}]]*/;
+		}
+		
+		let appendLi = 	'<li>'+
+						'	<div class="tl_type1">'+
+						'        <div class="s_plusminus s_plus">&middot;</div>'+
+						'        <div class="cont">'+
+						'            <p class="time">'+regDate+'</p>'+
+						'            <p class="title"><a href="javascript:moveChannelByChannelId('+channel['channel_id']+')"><span class="'+type+'">'+state+'</span>'+channel['ch_name']+'</a></p>'+
+						'            <p class="ment">'+
+						                 ment+
+						'            </p>';
+		if(state == wordSubscribe && data['subscribed']){
+			appendLi += '            <p class="ment">'+
+						'                <a href="javascript:subscribe('+channel['channel_id']+')" class="n_sub">'+wordUnsubscribe+'</a>'+
+						'            </p>';
+		}		
+		appendLi += 	'        </div>'+
+						'    </div>'+
+						'</li>';
+		return appendLi;
+	}
+	function changeFilterType(){
+		
+		filterType = $("#sel_filter_type").val();
+		
+		contentClear()
+		getSubscribeHist(1, 20);
+	}
+	
+	function changeSortType(){
+		log($("#sel_sort_type").val());
+		sortType = $("#sel_sort_type").val();
+		contentClear()
+		getSubscribeHist(1, 20);
+	}
+	
+	function contentClear(){
+		$("#ul_subs_history").empty()
+	}
+	
+	function subscribe(chId){
+		log(chId);
+		
+		let reqUrl = prefix + "/api/channel/subscribe.do?channel_id="+chId;
+		log(reqUrl);
+		
+		$.ajax({
+	        url: reqUrl,
+	        type:'get',
+	        contentType:"application/json",
+	        success:function(data){
+	        	log(data);
+	        	if(data['state'] == STATE_SUCCESS){
+	        		if(data['data'] == STATUS_SUBSCRIBE){
+	        			alert(/*[[#{res.subscribe}]]*/)
+	        		} else {
+	        			alert(/*[[#{res.unsubscribe}]]*/)
+	        		}
+	        		location.reload()
+	        	} else{
+	        		alertErrorMessage(data['error_message']);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+		
+	}
+</script>
+<body>    
+
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a th:href="@{/m/channel/channel.do}" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail" th:text="#{member.subs_hist}">구독 내역</h1>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <div class="bg_gray">
+
+                    <div class="wrap_content_padding" style="margin-bottom:0;">
+                        
+                        <div class="wrap_myinfo">
+
+                            <ul class="mydata_now">
+                                <li>
+                                    <a href="#">
+                                        <span class="tit" th:text="#{count.subscribe}">구독수</span>
+                                        <p class="num" th:text="${subsCnt}">250</p>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="#">
+                                        <span class="tit" th:text="#{count.subscriber}">구독자</span>
+                                        <p class="num" th:text="${subscriber}">250</p>
+                                    </a>
+                                </li>
+                            </ul>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="wrap_content_padding" style="margin-top:10px;">
+
+                    <!-- S:View Filter -->
+                    <div class="wrap_viewfilter">
+
+                        <div class="viewfilter_filter">
+                            <select id="sel_filter_type" class="input_type_none" onchange="changeFilterType()">
+                                <option value = 0 th:text="#{filter.option.all_view}">전체보기</option>
+                                <option value = 1 th:text="#{filter.option.subs_view}">구독함보기</option>
+                                <option value = 2 th:text="#{filter.option.be_subs_view}">구독됨보기</option>
+                                <option value = 3 th:text="#{filter.option.unsubs_view}">해지 보기</option>
+                            </select>
+                        </div>                          
+
+                        <div class="viewfilter_sort">
+                            <select id="sel_sort_type" class="input_type_none" onchange="changeSortType()" >
+                                <option value = "desc" th:text="#{common.orderby_lately}">최신순</option>
+                                <option value = "asc" th:text="#{common.orderby_firstly}">처음순</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <ul id="ul_subs_history" class="timeline_wrap" th:if="${histSize > 0}">
+                    <th:block th:each="subsHist : ${subsHist}">
+                    	<li>
+                            <div class="tl_type1">
+                                <div class="s_plusminus s_plus">&middot;</div>
+                                <div class="cont">
+                                    <p class="time" th:text="${#calendars.format(subsHist.subsHistory.regDate,'YYYY.MM.dd HH:mm')}">2020.10.10 14:34</p>
+                                    <p class="title"><span th:if="${subsHist.subsHistory.status == 0}" class="type1" th:text="#{member.subs.unsubscribe}">해지함</span>
+                                    <th:block th:if="${subsHist.subsHistory.status == 1}">
+                                    	<span th:if="${subsHist.subsHistory.subscriber == userSeq }" class="type1" th:text="#{member.subs.subscribe}">구독함</span>
+                                    	<span th:if="${subsHist.subsHistory.subscriber != userSeq }" class="type2" th:text="#{member.subs.subscribed}">구독됨</span>
+                                    </th:block>
+                                    <a th:href="|javascript:moveChannelByChannelId(${subsHist.channelInfo.channelId})|" th:text="${subsHist.channelInfo.chName}"></a>
+                                    
+                                    </p>
+                                    <p class="ment" th:if="${subsHist.subsHistory.status == 1}">
+                                        <th:block th:text="|${subsHist.subscriberInfo.nickName} #{member.is} ${subsHist.channelInfo.chName}#{member.subs.append_subs}|"></th:block>
+                                    </p>
+                                    <p class="ment" th:if="${subsHist.subsHistory.status == 0}">
+                                        <th:block th:text="|${subsHist.subscriberInfo.nickName} #{member.is} ${subsHist.channelInfo.chName}#{member.subs.append_unsubs}|"></th:block>
+                                    </p>
+                                    <p class="ment" th:if="${subsHist.subscribed == true} ">
+                                        <a th:if="${subsHist.subsHistory.status == 1}" th:href="|javascript:subscribe(${subsHist.channelInfo.channelId})|" class="n_sub" th:text="#{member.subs.word_unsubs}">구독해지</a>
+                                    </p>
+                                </div>
+                            </div>
+                        </li>
+                    
+                    </th:block>    
+                    </ul>  
+
+                </div>
+
+            </div>
+            
+        </div>
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>

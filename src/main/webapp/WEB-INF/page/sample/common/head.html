@@ -1,0 +1,49 @@
+
+	<head>
+		<!-- meta -->
+	    <meta charset="utf-8">
+	    <meta name="msapplication-TileColor" content="#ffffff">
+	    <meta name="msapplication-TileImage" th:content="@{/image/ico/ms-icon-144x144.png}">
+	    <meta name="theme-color" content="#ffffff">
+	    <meta name="viewport" content="width=device-width minimum-scale=1.0 maximum-scale=1.0 user-scalable=no" />
+	    
+		<title>REVUNARA :: All reviews in the world</title>
+		<!-- link -->
+	    <link rel="shortcut icon" th:href="@{/image/ico/favicon.ico}" type="image/x-icon">
+	    <link rel="icon" th:href="@{/image/ico/favicon.ico}" type="image/x-icon">
+	    <link rel="apple-touch-icon" sizes="57x57" th:href="@{/image/ico/apple-icon-57x57.png}">
+	    <link rel="apple-touch-icon" sizes="60x60" th:href="@{/image/ico/apple-icon-60x60.png}">
+	    <link rel="apple-touch-icon" sizes="72x72" th:href="@{/image/ico/apple-icon-72x72.png}">
+	    <link rel="apple-touch-icon" sizes="76x76" th:href="@{/image/ico/apple-icon-76x76.png}">
+	    <link rel="apple-touch-icon" sizes="114x114" th:href="@{/image/ico/apple-icon-114x114.png}">
+	    <link rel="apple-touch-icon" sizes="120x120" th:href="@{/image/ico/apple-icon-120x120.png}">
+	    <link rel="apple-touch-icon" sizes="144x144" th:href="@{/image/ico/apple-icon-144x144.png}">
+	    <link rel="apple-touch-icon" sizes="152x152" th:href="@{/image/ico/apple-icon-152x152.png}">
+	    <link rel="apple-touch-icon" sizes="180x180" th:href="@{/image/ico/apple-icon-180x180.png}">
+	    <link rel="icon" type="image/png" sizes="192x192"  th:href="@{/image/ico/android-icon-192x192.png}">
+	    <link rel="icon" type="image/png" sizes="32x32" th:href="@{/image/ico/favicon-32x32.png}">
+	    <link rel="icon" type="image/png" sizes="96x96" th:href="@{/image/ico/favicon-96x96.png}">
+	    <link rel="icon" type="image/png" sizes="16x16" th:href="@{/image/ico/favicon-16x16.png}">
+	    <link rel="stylesheet" type="text/css" th:href="@{/css/mmenu.css}">  
+	    <link rel="stylesheet" type="text/css" th:href="@{/css/slick.css}">
+	    <link rel="stylesheet" type="text/css" th:href="@{/css/slick-theme.css}">
+	    <link rel="stylesheet" type="text/css" th:href="@{/css/tom.css}">
+	    
+	   	<link id="contextPathHolder" th:data-contextPath="${#httpServletRequest.getContextPath()}"/>
+	   
+		<!-- js -->
+	    <script type="text/javascript" th:src="@{/js/jquery-3.3.1.min.js}"></script>
+	    <script type="text/javascript" th:src="@{/js/jquery-slide.js}"></script>
+	    <script type="text/javascript" th:src="@{/js/slick.js}"></script>
+	    <script type="text/javascript" th:src="@{/js/jquery-ui.js}"></script>
+	    <script type="text/javascript" th:src="@{/js/common_ui.js}"></script>   
+	    
+	    <script type="text/javascript" th:inline="javascript" th:src="@{/js/tom_lib.js?ver=5}"></script>
+	    <script type="text/javascript" th:inline="javascript" th:src="@{/js/tom_ui_lib.js?ver=2}"></script>
+	    <script type="text/javascript" th:src="@{/js/moment-with-locales.min.js}"></script>
+	    <script type="text/javascript" th:src="@{/js/moment-timezone-with-data.min.js}"></script>
+	    
+	</head>
+	<script>
+		var prefix = $('#contextPathHolder').attr('data-contextPath') ? $('#contextPathHolder').attr('data-contextPath') : '';
+	</script>

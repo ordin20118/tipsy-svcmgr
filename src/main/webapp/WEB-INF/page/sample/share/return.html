@@ -1,0 +1,25 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+	
+    <meta property="og:type"        content="article">
+    <meta property="og:title"       th:content="${pageInfo.title}">
+    <meta property="og:description" th:content="${pageInfo.description}">
+    <meta property="og:image"       th:content="${pageInfo.imageUrl}">
+    <meta property="og:url"         th:content="${pageInfo.selfUrl}">
+    
+    
+    <!-- meta -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no">
+    
+	<title th:text="'Revupia :: ' + ${pageInfo.title}"></title>
+</head>
+<body>
+
+
+<script th:inline="javascript">
+	location.href = /*[[ ${pageInfo.linkUrl} ]]*/;
+</script>
+</body>
+</html>

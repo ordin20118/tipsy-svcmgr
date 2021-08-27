@@ -1,0 +1,128 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<script th:inline="javascript">
+
+	var listSize = /*[[${listSize}]]*/
+	
+	let moreJobResult = true;
+	let currentPage = 1;
+	
+	let prodId = null;
+
+	$(document).ready(function() {
+				
+		if(getParams("prodId") != null) {
+			prodId = getParams("prodId")[0];
+		}
+		
+		if(listSize < 10){
+			moreJobResult = false;
+		}
+		
+		jQuery(window).scroll(function() {
+			if (jQuery(window).scrollTop() >= jQuery(document).height() - jQuery(window).height()) {
+				if(moreJobResult) {
+					getMoreRecommProdList(currentPage+1, 10);
+		    	}
+			}
+		});
+	});
+
+	function getMoreRecommProdList(nowPage, perPage){
+		let urlParam = 'paging.nowPage=' +nowPage +
+  		'&paging.perPage=' + perPage +
+  		'&selProdId=' + prodId +
+  		'&recommType=prod';
+		
+		let reqUrl = prefix +'/api/recomm/recomm_prod_for_prod.do?'+urlParam;
+		
+		$.ajax({
+	        url: reqUrl,
+	        type:'get',
+	        success:function(data){
+	        	log(data);
+	        	if(data['state'] == STATE_SUCCESS){
+	        		printRecommProdList(data['data']['recomm_prod_list']);
+	        	} else{
+	        		alertErrorMessage(data['error_message']);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	function printRecommProdList(rList){
+		currentPage += 1;
+		if(rList.length < 10){
+			moreJobResult = false;
+		}
+		
+		let appendLi = contentInfoListToLi(rList);
+		$("#ul_recomm_prod_list").append(appendLi);
+	}
+	
+</script>
+
+
+<body>    
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a href="javascript:history.go(-1)" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail">추천 제품</h1>
+                <div class="search_wrap_s">
+                    <a href="" class="btn_search"></a>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="wrap_content">
+				<div class="list_wrap">
+
+                    <div class="list_wrap_line">
+                        
+                    <div class="group_title">
+                        
+                        <div class="viewfilter_sort">
+                            <select class="input_type_none">
+                                <option>평점순</option>
+                                <option>최신순</option>
+                                <option>인기순</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- S:List Flat -->
+                    <ul id="ul_recomm_prod_list" class="list_type_flat">       
+	                    <th:block th:each="item: ${recommProdList}">
+	                    	<th:block th:replace="/common/item_content.html"></th:block>
+	                    </th:block>                                     
+                  	</ul>
+
+                    </div>
+
+                </div>
+                
+
+            </div>
+
+        </div>
+        <th:block th:replace="/common/footer.html"></th:block>
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+	<!-- third party js -->
+    <script th:src="@{/js/Chart.bundle.min.js}"></script>
+    <!-- third party js ends -->
+
+    <!-- demo app -->
+    <script th:src="@{/js/tom.chartjs_price_stat.js}"></script>
+    <!-- end demo js-->
+</body>
+
+</html>

@@ -1,0 +1,265 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:replace="/common/head.html"></th:block>
+<script th:inline="javascript">
+	const SHARE_MEDIA_KAKAO = 0;
+	const SHARE_MEDIA_FACEBOOK = 1;
+	
+	var shareHist = /*[[${shareHist}]]*/
+	
+	let filterType = null;
+	let sortType = SORT_TYPE_DESC;
+	let moreJobResult = true;
+	let currentPage = 1;
+	let dataCnt = /*[[${histSize}]]*/;
+	$(document).ready(function(){
+		
+		log(shareHist);
+		
+		jQuery(window).scroll(function() {
+			if (jQuery(window).scrollTop() >= jQuery(document).height() - jQuery(window).height()) {
+				if(moreJobResult && dataCnt < 100) {
+					getShareHist(currentPage+1, 20);
+		    	}
+			}
+		});	
+	})
+
+	
+	function getShareHist(nowPage, perPage){
+		let urlParam = 'paging.nowPage=' +nowPage +
+  		'&paging.perPage=' + perPage +
+  		'&orderby.field=share_date' +
+  		'&orderby.sorting='+sortType;
+  		if(filterType != null){
+  			urlParam += '&filterType='+filterType;
+  		}
+  		
+		let reqUrl = prefix +'/api/member_info/get_share_hist.do?'+urlParam;
+		
+		$.ajax({
+	        url: reqUrl,
+	        type:'get',
+	        success:function(data){
+	        	log(data);
+	        	if(data['state'] == STATE_SUCCESS){
+	        		currentPage = nowPage;
+	        		printShareHistory(data['list']);
+	        	} else{
+	        		alertErrorMessage(data['error_message']);
+	    		}
+	        },
+	        error:function(request, status, error){
+	        	alertNetworkErr();
+	        }
+	    });
+	}
+	
+	function printShareHistory(list){
+		let appendLi = makeShareAppendLi(list);
+		
+		$("#ul_share_history").append(appendLi);
+		
+		dataCnt += list.length;
+		if(list.length < 20){
+			moreJobResult = false;
+		}
+	}
+	
+	function makeShareAppendLi(list){
+		let appendLi = "";
+		if(list.length > 0){
+			for(let i=0; i<list.length; i++){
+				appendLi += makeShareLi(list[i]);
+			}
+		}
+		return appendLi;
+	}
+	
+	function makeShareLi(data){
+		let share = data['share_info'];
+		let title = data['content_title'];
+		
+		let shareDate = "-";
+		if(share['share_date'] != null){
+			shareDate = moment(share['share_date']).format('YYYY.MM.DD HH:mm');
+		}
+		
+		let appendP = '';
+		
+		let wordProd = /*[[#{filter.content.prod}]]*/;
+		let wordReview = /*[[#{filter.content.review}]]*/;
+		let wordCompare = /*[[#{filter.review.detail.compare}]]*/;
+		let wordContShare = /*[[#{share.content_share}]]*/;
+		let wordEtc = /*[[#{filter.review.detail.etc}]]*/;
+
+	    if(share['content_type'] == TYPE_PROD){
+	    	appendP = '<p class="title"><a href="javascript:moveProd('+share['content_id']+')"><span class="type1">'+wordProd+'</span>'+wordContShare+'</a></p>'+
+	    			  '<a href="javascript:moveProd('+share['content_id']+')"><p class="desc">'+title+'</p></a>'
+	    } else if(share['content_type'] == TYPE_REVIEW) {
+	    	appendP = '<p class="title"><a href="javascript:moveReview('+share['content_id']+')"><span class="type2">'+wordReview+'</span>'+wordContShare+'</a></p>'+
+			  '<a href="javascript:moveReview('+share['content_id']+')"><p class="desc">'+title+'</p></a>'
+	    } else if(share['content_type'] == TYPE_COMPARE) {
+	    	appendP = '<p class="title"><a href="javascript:moveCompare('+share['content_id']+')"><span class="type3">'+wordCompare+'</span>'+wordContShare+'</a></p>'+
+			  '<a href="javascript:moveCompare('+share['content_id']+')"><p class="desc">'+title+'</p></a>'
+	    } else{
+	    	appendP = '<p class="title"><span class="type1">'+wordEtc+'</span>'+wordProd+'</p>'+
+			  '<p class="desc">'+title+'</p>'
+	    }
+	    
+		let classTypeMedia = '';
+		let mediaTypeName = '';
+		
+		if(share['share_media'] == SHARE_MEDIA_KAKAO){
+			classTypeMedia = 'kakao';
+			mediaTypeName = 'KAKAO';
+		} else {
+			classTypeMedia = 'facebook';
+			mediaTypeName = 'FACEBOOK';
+		}
+		
+		
+		let appendLi = 	'<li>'+
+						'    <div class="tl_type1">'+
+						'        <div class="s_plusminus s_plus">&middot;</div>'+
+						'        <div class="cont">'+
+						'            <p class="time">'+shareDate+'</p>'+
+										appendP+
+						'            <p class="data">'+
+						'                <span><strong class="'+classTypeMedia+'">'+mediaTypeName+'</strong></span>'+
+						'            </p>'+
+						'        </div>'+
+						'    </div>'+
+						'</li>';
+		return appendLi;
+	}
+	
+	function changeFilterType(){
+		log($("#sel_filter_type").val());
+		if($("#sel_filter_type").val() == 0){
+			filterType = null;
+		} else {
+			filterType = $("#sel_filter_type").val();
+		}
+		contentClear()
+		getShareHist(1, 20);
+	}
+	
+	function changeSortType(){
+		log($("#sel_sort_type").val());
+		sortType = $("#sel_sort_type").val();
+		contentClear();
+		getShareHist(1, 20);
+	}
+	
+	function contentClear(){
+		$("#ul_share_history").empty()
+	}
+	
+	
+</script>
+<body>    
+
+    <div id="page" class="wrap_total">
+
+        <div class="head_wrap">
+            <a th:href="@{/m/channel/channel.do}" class="btn_back"></a>
+            <div class="title_wrap">
+                <h1 class="title_detail" th:text="#{member.share_hist}">공유 내역</h1>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <div class="wrap_content">
+
+                <div class="bg_gray">
+
+                    <div class="wrap_content_padding" style="margin-bottom:0;">
+                        
+                        <div class="wrap_myinfo">
+
+                            <ul class="mydata_now1">
+                                <li>
+                                    <a href="">
+                                        <span class="tit" th:text="#{filter.content.prod}">제품</span>
+                                        <p class="num" th:text="${prodCnt}">250</p>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="">
+                                        <span class="tit" th:text="#{filter.content.review}">리뷰</span>
+                                        <p class="num" th:text="${reviewCnt}">250</p>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="">
+                                        <span class="tit" th:text="#{filter.review.detail.compare}">비교</span>
+                                        <p class="num" th:text="${compareCnt}">250</p>
+                                    </a>
+                                </li>
+                            </ul>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="wrap_content_padding" style="margin-top:10px;">
+
+                    <!-- S:View Filter -->
+                    <div class="wrap_viewfilter">
+
+                        <div class="viewfilter_filter">
+                             <select id="sel_filter_type" class="input_type_none" onchange="changeFilterType()">
+                                <option value = 0	th:text="#{filter.option.all_view}">전체보기</option>
+                                <option value = 100	th:text="#{filter.option.prod_share_view}">제품공유보기</option>
+                                <option value = 210	th:text="#{filter.option.review_share_view}">리뷰공유보기</option>
+                                <option value = 300	th:text="#{filter.option.comp_share_view}">비교공유보기</option>
+                            </select>
+                        </div>                          
+
+                        <div class="viewfilter_sort">
+                            <select id="sel_sort_type" class="input_type_none" onchange="changeSortType()" >
+                                <option value = "desc" th:text="#{common.orderby_lately}">최신순</option>
+                                <option value = "asc" th:text="#{common.orderby_firstly}">처음순</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <ul id="ul_share_history" class="timeline_wrap" th:if="${histSize > 0}">
+                    <th:block th:each="shareHist : ${shareHist}" th:with="TYPE_PROD=100, TYPE_REVIEW=210, TYPE_COMPARE=300">
+                    	<li >
+                            <div class="tl_type1">
+                                <div class="s_plusminus s_plus">&middot;</div>
+                                <div class="cont">
+                                    <p class="time" th:text="${#calendars.format(shareHist.shareInfo.shareDate,'YYYY.MM.dd HH:mm')}">2020.10.10 14:34</p>
+                                    <p class="title" th:if="${shareHist.shareInfo.contentType == TYPE_PROD}"><span class="type1" th:text="#{filter.content.prod}">제품</span><th:block th:text="#{share.content_share}">콘텐츠 공유</th:block></p>
+                                    <p class="title" th:if="${shareHist.shareInfo.contentType == TYPE_REVIEW}"><span class="type2" th:text="#{filter.content.review}">리뷰</span><th:block th:text="#{share.content_share}">콘텐츠 공유</th:block></a></p>
+                                    <p class="title" th:if="${shareHist.shareInfo.contentType == TYPE_COMPARE}"><span class="type3" th:text="#{filter.review.detail.compare}">비교</span><th:block th:text="#{share.content_share}">콘텐츠 공유</th:block></a></p>
+                                    <p class="desc" th:if="${shareHist.shareInfo.contentType == TYPE_PROD}"><a th:href="|javascript:moveProd(${shareHist.shareInfo.contentId})|" th:text="${shareHist.contentTitle}">갤럭시 S10</a></p>
+                                    <p class="desc" th:if="${shareHist.shareInfo.contentType == TYPE_REVIEW}"><a th:href="|javascript:moveReview(${shareHist.shareInfo.contentId})|" th:text="${shareHist.contentTitle}">갤럭시 S10</a></p>
+                                    <p class="desc" th:if="${shareHist.shareInfo.contentType == TYPE_COMPARE}"><a th:href="|javascript:moveCompare(${shareHist.shareInfo.contentId})|" th:text="${shareHist.contentTitle}">갤럭시 S10</a></p>
+                                    <p class="data">
+                                        <span><strong class="kakao" th:if="${shareHist.shareInfo.shareMedia == 0}">KAKAO</strong></span>
+                                        <span><strong class="facebook" th:if="${shareHist.shareInfo.shareMedia == 1}">FACEBOOK</strong></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </li>
+                    </th:block> 
+                    </ul>  
+
+                </div>
+
+            </div>
+            
+        </div>
+        <th:block th:replace="/common/bottom_menu.html"></th:block>
+    </div>
+
+</body>
+
+</html>
