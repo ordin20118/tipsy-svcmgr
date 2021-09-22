@@ -18,7 +18,7 @@
  	<meta name="description" content="">
   	<meta name="author" content=""> -->
 
-	<title>Al Alcohol</title>
+	<title>Tipsy</title>
 	
 	<!-- link -->
 	<!-- <link href="${path}/css/tom.css" rel="stylesheet"> -->

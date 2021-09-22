@@ -24,12 +24,18 @@
   
   <!-- 시작페이지 설정 -->
   <welcome-file-list>
-      <welcome-file>/WEB-INF/home.jsp</welcome-file>
+      <welcome-file>/WEB-INF/page/home.jsp</welcome-file>
   </welcome-file-list>
   
   <servlet-mapping>
     <servlet-name>appServlet</servlet-name>
-    <url-pattern>*.do</url-pattern>
+    <url-pattern>/</url-pattern>
+    <url-pattern>*.css</url-pattern>
+    <url-pattern>*.js</url-pattern>
+    <url-pattern>*.html</url-pattern>
+    <url-pattern>*.jpg</url-pattern>
+    <url-pattern>*.jpeg</url-pattern>
+    <url-pattern>*.png</url-pattern>
   </servlet-mapping>
   <!-- 
   <servlet-mapping>
