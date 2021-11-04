@@ -33,7 +33,7 @@
 		<beans:property name="suffix" value=".jsp" />
 	</beans:bean>
 	
-	<context:component-scan base-package="gwang.allalcohol" />
+	<context:component-scan base-package="tipsy.svcmgr" />
 	<tx:annotation-driven transaction-manager="transactionManager" proxy-target-class="true"/>
 	
 	

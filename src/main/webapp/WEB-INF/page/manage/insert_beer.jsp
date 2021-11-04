@@ -52,7 +52,7 @@
 
 	$(document).ready(function() {
 
-		console.log("[Insert Beer Page is loaded]");
+		console.log("[Insert Spirits Page is loaded]");
 		setEvents();
 		previewFile();
 		loadCountry();

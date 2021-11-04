@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tipsy.svcmgr.web.dao.BeerDao">
+
+	<insert id="insert" useGeneratedKeys="true" keyProperty="beerId">
+		INSERT INTO beer (
+			name_kr,
+			name_en, 
+			type,
+			upload_state,
+			update_state,
+			abv,
+			ibu,
+			srm,
+			country_id,
+			region,
+			category_id,
+			price,
+			description,
+			history,
+			reg_date
+		) VALUES (
+			#{nameKr}, 
+			#{nameEn}, 
+			#{type},
+			#{uploadState},
+			#{updateState},
+			#{abv},
+			#{ibu},
+			#{srm},
+			#{countryId},
+			#{region},
+			#{categoryId},
+			#{price}, 
+			#{description}, 
+			#{history},
+			NOW()
+		)
+	</insert>
+	
+	<select id="selectOne"  resultType="tipsy.svcmgr.web.dao.BeerDto">
+		SELECT  * 
+		FROM    beer
+		WHERE	beer_id = #{beerId}
+	</select>
+	
+	<select id="selectByName"  resultType="tipsy.svcmgr.web.dao.BeerDto">
+		SELECT  * 
+		FROM    beer
+		WHERE	name_kr like #{nameKr}
+	</select>
+
+	<select id="selectList"  resultType="tipsy.svcmgr.web.dao.BeerDto">
+		SELECT   * 
+		FROM     beer
+		<include refid="common.sql.orderbyQuery" />
+		<include refid="common.sql.pagingQuery" />
+	</select>
+	
+	<select id="searchName"  resultType="tipsy.svcmgr.web.dao.BeerDto">
+		SELECT   * 
+		FROM     beer
+		WHERE	 LOWER(name_en) = LOWER(#{keyword})
+	</select>
+	
+	<update id="updateByCode">
+		UPDATE beer
+		SET
+			description   = #{description},
+			state         = #{state},
+			use_date      = #{useDate}
+		WHERE code = #{code}
+	</update>
+
+</mapper>

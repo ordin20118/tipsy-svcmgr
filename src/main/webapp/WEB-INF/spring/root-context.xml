@@ -27,13 +27,21 @@
 	</bean>
 	
 	
+	<bean class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
+    <property name="alwaysUseFullPath" value="true">
+	</property></bean>
+	 
+	<bean class="org.springframework.web.servlet.mvc.annotation.DefaultAnnotationHandlerMapping">
+	    <property name="alwaysUseFullPath" value="true">
+	</property></bean>
+	
 	
 	
 		
 	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
 		<property name="dataSource" ref="dataSource" />
-		<property name="configLocation"  value="classpath:gwang/allalcohol/web/dao/mapper/mybatis-config.xml"></property>
-		<property name="mapperLocations" value="classpath*:gwang/allalcohol/web/dao/mapper/*_mapper.xml"/>
+		<property name="configLocation"  value="classpath:tipsy/svcmgr/web/dao/mapper/mybatis-config.xml"></property>
+		<property name="mapperLocations" value="classpath*:tipsy/svcmgr/web/dao/mapper/*_mapper.xml"/>
 	</bean>
 	
 	
@@ -53,7 +61,7 @@
     </bean>
     
     <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
-		<property name="basePackage" value="gwang.allalcohol.web.dao" />
+		<property name="basePackage" value="tipsy.svcmgr.web.dao" />
 		<property name="sqlSessionFactory" ref="sqlSessionFactory" />
 		
 	</bean>
