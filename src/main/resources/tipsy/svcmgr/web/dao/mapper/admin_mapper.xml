@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tipsy.svcmgr.web.dao.AdminDao">
+
+	
+	<select id="selectOne"  resultType="tipsy.svcmgr.web.dao.AdminDto">
+		SELECT  * 
+		FROM    admin
+		WHERE	admin_id = #{adminId}
+	</select>
+	
+	<select id="selectByName"  resultType="tipsy.svcmgr.web.dao.AdminDto">
+		SELECT  * 
+		FROM    admin
+		WHERE	name = #{name}
+	</select>
+
+</mapper>

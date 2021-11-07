@@ -13,6 +13,9 @@ public class ImageDto extends ContentInfoVo {
 	public static final int IMAGE_TYPE_REP 		= 0;	// 대표 이미지
 	public static final int IMAGE_TYPE_NORMAL 	= 1;	// 일반 이미지
 	public static final int IMAGE_TYPE_ORIGINAL = 99;	// 원본 이미지
+		
+	public static final int IMAGE_CONTENT_TYPE_NATIONAL_FLAG = 901;	// 국기 이미지
+	public static final int IMAGE_CONTENT_TYPE_PROFILE 		 = 902;	// 프로필 이미지
 	
 	private Integer	imageId;
 	private Integer imageType;

@@ -29,7 +29,7 @@
             </a>
             <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownPortfolio">
               <a class="dropdown-item" href="${path}/manager/page/insert_beer">Beer</a>
-              <a class="dropdown-item" href="${path}/manager/page/insert_beer">Spirits</a>
+              <a class="dropdown-item" href="${path}/manager/page/insert_spirits">Spirits</a>
             </div>
           </li>
           <!--

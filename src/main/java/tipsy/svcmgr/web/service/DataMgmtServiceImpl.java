@@ -21,6 +21,8 @@ import tipsy.common.configuration.LoggerName;
 import tipsy.common.util.ImageResizer;
 import tipsy.svcmgr.web.controller.param.ImageParam;
 import tipsy.svcmgr.web.controller.param.PagingParam;
+import tipsy.svcmgr.web.dao.AdminDao;
+import tipsy.svcmgr.web.dao.AdminDto;
 import tipsy.svcmgr.web.dao.BeerDao;
 import tipsy.svcmgr.web.dao.BeerDto;
 import tipsy.svcmgr.web.dao.CategoryDao;
@@ -29,11 +31,16 @@ import tipsy.svcmgr.web.dao.CountryDao;
 import tipsy.svcmgr.web.dao.CountryDto;
 import tipsy.svcmgr.web.dao.ImageDao;
 import tipsy.svcmgr.web.dao.ImageDto;
+import tipsy.svcmgr.web.dao.LiquorDao;
+import tipsy.svcmgr.web.dao.LiquorDto;
+import tipsy.svcmgr.web.dao.ManageLogDao;
+import tipsy.svcmgr.web.dao.ManageLogDto;
 import tipsy.svcmgr.web.dao.PartJobDao;
 import tipsy.svcmgr.web.dao.PartJobDto;
 import tipsy.svcmgr.web.dao.PartTimeWorkerDao;
 import tipsy.svcmgr.web.dao.PartTimeWorkerDto;
 import tipsy.svcmgr.web.dao.RawCategoryDto;
+import tipsy.svcmgr.web.vo.ContentInfoVo;
 import tipsy.svcmgr.web.vo.JoinedPartJobVo;
 import tipsy.svcmgr.web.vo.PartJobRewardVo;
 
@@ -41,6 +48,12 @@ import tipsy.svcmgr.web.vo.PartJobRewardVo;
 public class DataMgmtServiceImpl implements DataMgmtService {
 
 	private Logger log = LoggerFactory.getLogger(LoggerName.SVC);
+
+	@Autowired
+	private AdminDao adminDao;
+	
+	@Autowired
+	private ManageLogDao manageLogDao;
 	
 	@Autowired
 	private PartTimeWorkerDao partTimeWorkerDao;
@@ -50,6 +63,9 @@ public class DataMgmtServiceImpl implements DataMgmtService {
 	
 	@Autowired
 	private BeerDao beerDao;
+	
+	@Autowired
+	private LiquorDao liquorDao;
 	
 	@Autowired
 	private ImageDao imageDao;
@@ -94,6 +110,40 @@ public class DataMgmtServiceImpl implements DataMgmtService {
 		return res;
 	}
 	
+
+	@Override
+	public BasicListResponse insertSpiritsInfo(int tid, LiquorDto liquor) throws Exception {
+		BasicListResponse res = new BasicListResponse();
+
+		// insert liquor
+		liquor.setUploadState(BeerDto.UPLOAD_STATE_NO);
+		liquor.setUpdateState(BeerDto.UPDATE_STATE_WAIT);
+		
+		log.debug("[liquor]:"+liquor);
+		
+		liquorDao.insert(liquor);
+
+		log.debug("[" + tid + "][증류주 정보 입력 완료]");
+		
+		// select admin info
+		AdminDto admin = adminDao.selectByName(liquor.getAdminName());
+		
+		// insert manage log
+		ManageLogDto log = new ManageLogDto();
+		log.setAdminId(admin.getAdminId());
+		log.setContentId(liquor.getLiquorId());
+		log.setContentType(ContentInfoVo.CONTENT_TYPE_LIQUOR);
+		log.setJobCode(ManageLogDto.JOB_CODE_INSERT_LIQUOR);
+		log.setJobName(ManageLogDto.JOB_NAME_INSERT_LIQUOR);		
+		manageLogDao.insert(log);
+				
+		res.setData(liquor);
+		res.setState(BasicListResponse.STATE_SUCCESS);
+		res.setStateMessage(BasicListResponse.STATE_SUCCESS_MESSAGE);
+
+		return res;
+	}
+
 
 	@Override
 	public BasicListResponse checkInPartTimeWorker(int tid, PartTimeWorkerDto worker) {
@@ -257,8 +307,12 @@ public class DataMgmtServiceImpl implements DataMgmtService {
 			String dirPath = Configuration.getInstance().getStringExtra("datapath.image");
 			String subRoot = "";
 			
-			if(imageParam.getContentType() <= ImageDto.CONTENT_TYPE_COCTAIL) {
+			if(imageParam.getContentType() == ContentInfoVo.CONTENT_TYPE_LIQUOR) {
 				subRoot = "/product";
+			} else if(imageParam.getContentType() == ContentInfoVo.CONTENT_TYPE_MATERIAL) {
+				subRoot = "/material";
+			} else if(imageParam.getContentType() == ImageDto.IMAGE_CONTENT_TYPE_NATIONAL_FLAG) {
+				subRoot = "/flag";
 			}
 			
 			log.debug("[Upload Image] root path:"+dirPath);

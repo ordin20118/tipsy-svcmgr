@@ -13,6 +13,7 @@
 	var dataType = 0;
 	var selCountry = 0;
 	var selCategory;
+	var selType = '';
 	
 	var countryList = null;
 	var categoryList = null;
@@ -30,6 +31,7 @@
 	var countryReward = 0;
 	var regionReward = 0;
 	var abvReward = 0;
+	var volumeReward = 0;
 	var descReward = 0;
 	var historyReward = 0;
 	var priceReward = 0;
@@ -40,7 +42,7 @@
 		let reward = nameKrReward + nameEnReward + imageReward
 					+ countryReward + regionReward + abvReward
 					+ descReward + historyReward + priceReward
-					+ categoryReward + typeReward;
+					+ categoryReward + typeReward + volumeReward;
 
 		let textHtml = "<p style='color: blue'>예상 보상 금액 : "+reward+"원</p>";
 		$("#total_reward").html(textHtml);
@@ -166,6 +168,27 @@
 			setTotalReward();
 
 		});
+		
+		$("#volume").change(function() {
+
+			console.log("용량 입력됨");
+
+			// 숫자만
+			if( !numberRegex.test($("#volume").val()) ) {
+				alert("숫자만 입력해주세요");
+				volumeReward = 0;
+				$("#volume").val('')
+				return;
+			}
+			
+			if($("#volume").val() != null && $("#volume").val().length > 0) {
+				volumeReward = 100;
+			} else {
+				volumeReward = 0;
+			}			
+			setTotalReward();
+
+		});
 
 		$("#type").change(function() {
 
@@ -273,7 +296,7 @@
 
 	function loadCateg() {
 
-		var url = prefix +"/api/category_child.do?categId=0101";
+		var url = prefix +"/api/category_child.do?categId=02";
 
 		$.ajax({
 			url:url,
@@ -334,6 +357,28 @@
 			}
 		}
 		
+	}
+
+	function selectType(id) {
+
+		selType = id;
+		
+		if(id == "") {
+			$("#dropdownTypeButton").html('선택');			
+			typeReward = 0;
+		} else if(id == "0") {
+			$("#dropdownTypeButton").html('병');
+			typeReward = 100;
+		} else if(id == "1") {
+			$("#dropdownTypeButton").html('캔');
+			typeReward = 100;
+		} else if(id == "2") {
+			$("#dropdownTypeButton").html('페트병');			
+			typeReward = 100;
+		}
+
+		setTotalReward();
+	
 	}
 
 	function loadCountry() {
@@ -467,10 +512,12 @@
 
 		console.log("[sendData()]");
 		
-		if(!isCheckIn) {
-			alert('제출전 계좌를 인증해주세요.');
+		let userName = $("#user_name").val();
+		if(userName == null || userName.length == 0) {
+			alert("등록자명을 입력해주세요.");
 			return;
 		}
+		
 		
 		// - 필수 입력 확인
 		let nameKr = $("#name_kr").val();
@@ -479,9 +526,9 @@
 		let abv = $("#abv").val();
 		let categ = $("#categ").val();
 		let imageData = $("#image")[0].files[0];
-		let type = $('#type').val();
-
-		// ** 이미지 데이터 확인, 카테고리는 select에서 선택하도록
+		let type = selType;
+		
+		console.log("[type]:"+type)
 
 
 		if(nameKr != null && nameKr.length > 0
@@ -502,6 +549,7 @@
 		let description = $("#description").val();
 		let history = $("#history").val();
 		let price = $("#price").val();
+		let volume = $("#volume").val();
 
 		console.log("[Total Reward]:"+totalReward);
 
@@ -512,9 +560,7 @@
 
 
 		let formData = {
-			"name":  $("#user_name").val(),
-			"bank":  $("#user_bank").val(),
-			"bank_account":  $("#user_bank_account").val(),
+			"admin_name":  $("#user_name").val(),
 			"name_kr": nameKr,
 			"name_en": nameEn,
 			"abv": abv,
@@ -523,18 +569,19 @@
 			"category_id": selCategory,
 			"type": type,
 			"price": price,
+			"volume": volume,
 			"description": description,
 			"history": history,
-			"reward": totalReward,
 			"type": jobType
 		}
 
-		console.log("[Send Beer Data]");
+		console.log("[Send Spirits Data]");
 		console.log(formData);
 
+		
 		let dataStr = JSON.stringify(formData);
 
-		var url = prefix +"/api/insert_beer.do";
+		var url = prefix +"/api/insert_spirits.do";
 
 		$.ajax({
 			url:url,
@@ -543,11 +590,11 @@
 			processData:false,
 			data:dataStr,
 			success:function(data){
-				console.log("insert beer result")
+				console.log("insert liquor result")
 				console.log(data)
 				if(data['state'] == STATE_SUCCESS){
 					// 이미지 업로드
-					uploadImage(data['data']['beer_id']);
+					uploadImage(data['data']['liquor_id']);
 				} else if(data['state'] == STATE_DUPLICATION){
 					alert("이미 등록된 정보입니다.");
 				} else {
@@ -594,7 +641,7 @@
 		formData.append("image",imageData)
 		formData.append("contentId", contentId)
 		formData.append("imageType", 0)
-		formData.append("contentType", 0)
+		formData.append("contentType", 100)
 
 		var url = prefix +"/api/upload_image.do";
 
@@ -662,7 +709,7 @@
   <div class="container">
 
     <!-- Page Heading/Breadcrumbs -->
-    <h1 class="mt-4 mb-3">맥주
+    <h1 class="mt-4 mb-3">증류주
       <small>데이터 입력</small>
     </h1>
 
@@ -679,22 +726,19 @@
       <div class="col-lg-4 mb-4">
         <h3>진행 방법</h3>
         <p>
-          1. 보상금 수신 계좌 등록을 하지 않았다면 계좌 등록부터 <button id="reg_account_btn" class="btn btn-primary btn-sm">계좌 등록</button><br>
-          2. 등록한 이름과 계좌번호를 입력하여 인증<br>
-          3. 맥주 정보를 기입<br>
-          4. 기입을 완료 했다면 <b>'제출'</b> 버튼을 클릭<br>
+          1. 등록자명 입력
+          2. 술 정보를 기입<br>
+          3. 기입을 완료 했다면 <b>'제출'</b> 버튼을 클릭<br>
           
         </p>
         <h3>주의 사항</h3>
         <p>
-          # 이름과 계좌 정보를 정확히 입력해주세요.<br>
+          # 이름과 계좌 정보를 정확히 입력해주세요. (기여도 반영)<br>
           # 빨간색 항목은 필수로 입력해야 할 정보입니다.<br>
-          # 부적절한 정보 입력시 보상을 받을 수 없습니다.<br>
-          -  ex1) 존재하지 않는 맥주 이름<br>
-          -  ex2) 맥주와 국가 정보가 매치되지 않는 경우<br>
-          # 부실한 데이터에 대한 보상금액은 차감됩니다.<br>
-          - 내용이 부실한 경우 (설명, 유래)<br>
-          
+          # 아래 해당사항 주의.<br>
+          -  ex1) 존재하지 않는 술 이름<br>
+          -  ex2) 해당 술과 국가 정보가 매치되지 않는 경우<br>
+        
         </p>
         <p>
           <abbr title="Email">*문의 메일</abbr>:
@@ -708,21 +752,17 @@
     <!-- 개인 인증 -->
     <div class="row">
       <div class="col-lg-8 mb-4">
-        <h3>로그인</h3>
+        <h3>등록자명</h3>
         <form name="sentMessage" id="" novalidate>
           <div class="control-group form-group">
             <div class="controls">
               <label style="color: #CC3D3D">이름:</label>
-              <input type="text" class="form-control" id="user_name" placeholder="홍길동" required data-validation-required-message="자신의 이름을 입력해주세요.">
-              <label style="color: #CC3D3D">은행:</label>
-              <input type="text" class="form-control" id="user_bank" placeholder="우리은행" required data-validation-required-message="은행을 입력해주세요.">
-              <label style="color: #CC3D3D">계좌:</label>
-              <input type="text" class="form-control" id="user_bank_account" placeholder="00-0000-00000-0000" required data-validation-required-message="계좌 정보를 입력해주세요.">
+              <input type="text" class="form-control" id="user_name" placeholder="ex) 홍길동" required data-validation-required-message="자신의 이름을 입력해주세요.">              
               <p class="help-block"></p>
             </div>
           </div>
         </form>
-        <button id="certification_btn" class="btn btn-primary">로그인</button><br>
+        <!-- <button id="certification_btn" class="btn btn-primary">로그인</button><br> -->
       </div>
     </div>
 
@@ -742,15 +782,15 @@
           </div>
           <div class="control-group form-group">
             <div class="controls">
-              <label style="color: #CC3D3D">맥주 이름(한국어):</label>
-              <input type="text" class="form-control" id="name_kr" required data-validation-required-message="맥주의 한글 이름을 입력해주세요.">
+              <label style="color: #CC3D3D">술 이름(한국어):</label>
+              <input type="text" class="form-control" id="name_kr" required data-validation-required-message="술의 한글 이름을 입력해주세요.">
               <p class="help-block"></p>
             </div>
           </div>
           <div class="control-group form-group">
             <div class="controls">
-              <label style="color: #CC3D3D">맥주 이름(영어):</label>
-              <input type="text" class="form-control" id="name_en" required data-validation-required-message="맥주의 영어 이름을 입력해주세요.">
+              <label style="color: #CC3D3D">술 이름(영어):</label>
+              <input type="text" class="form-control" id="name_en" required data-validation-required-message="술의 영어 이름을 입력해주세요.">
               <p class="help-block"></p>
               <button id="chck_duplicate_btn" type="button" class="btn btn-info">중복 확인</button>
             </div>
@@ -791,26 +831,44 @@
 				  <div id="category" class="dropdown-menu" aria-labelledby="dropdownMenuButton" style="overflow:scroll;height:200px;">
 				    <a class="dropdown-item" href="#">Action</a>
 				  </div>
-			 </div>
+			   </div>
               <!-- <input type="text" class="form-control" id="categ" required data-validation-required-message="select로 변경"/> -->
           	</div>
           </div>
           <div class="control-group form-group">
             <div class="controls">
               <label style="color: #CC3D3D">형태:</label>
-              <select id="type">
+              <div class="dropdown">
+				  <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownTypeButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+				    	선택
+				  </button>
+				  <div id="type" class="dropdown-menu" aria-labelledby="dropdownMenuButton" style="overflow:scroll;height:200px;">
+				    <a class="dropdown-item" href="javascript:selectType('')">선택</a>
+				    <a class="dropdown-item" href="javascript:selectType('0')">병</a>
+				    <a class="dropdown-item" href="javascript:selectType('1')">캔</a>
+				    <a class="dropdown-item" href="javascript:selectType('2')">페트병</a>
+				  </div>
+			   </div>
+              <!-- <select id="type">
                	<option value="">선택</option>
 			    <option value="0">병</option>
 			    <option value="1">캔</option>
 			    <option value="2">페트병</option>
-              </select>
+              </select> -->
+              <p class="help-block"></p>
+            </div>
+          </div>
+          <div class="control-group form-group">
+            <div class="controls">
+              <label>용량(mL)</label>        
+              <input type="text" class="form-control" id="volume" required data-validation-required-message="25.5"/>
               <p class="help-block"></p>
             </div>
           </div>
           <div class="control-group form-group">
             <div class="controls">
               <label>(선택) 설명 :</label>
-              <textarea rows="10" cols="100" class="form-control" id="description" placeholder="ex) 부드럽고 향이 강한 맥주..." required data-validation-required-message="부드럽고 향이 강한 맥주" maxlength="999" style="resize:none"></textarea>
+              <textarea rows="10" cols="100" class="form-control" id="description" placeholder="ex) 부드럽고 향이 강한 ..." required data-validation-required-message="부드럽고 향이 강한 맥주" maxlength="999" style="resize:none"></textarea>
             </div>
           </div>
           <div class="control-group form-group">
@@ -826,7 +884,7 @@
           	</div>
           </div>
           <div id="success"></div>
-          <div id="total_reward"></div>
+          <div id="total_reward" style="display: none;"></div>
           <!-- For success/fail messages -->
           <button type="button" class="btn btn-primary" id="sendMessageButton">제출</button>
         </form>

@@ -26,6 +26,7 @@ import tipsy.common.configuration.LoggerName;
 import tipsy.svcmgr.web.controller.param.PagingParam;
 import tipsy.svcmgr.web.dao.BeerDto;
 import tipsy.svcmgr.web.dao.ImageDto;
+import tipsy.svcmgr.web.dao.LiquorDto;
 import tipsy.svcmgr.web.dao.PartJobDto;
 import tipsy.svcmgr.web.dao.PartTimeWorkerDto;
 import tipsy.svcmgr.web.service.CountryService;
@@ -303,6 +304,46 @@ public class DataCollectApiController extends BasicController {
 			log.debug("[" + tid + "][Insert Beer Info]:" + beer);
 			
 			BasicListResponse res = dataMgmtService.insertBeerInfo(tid, beer, worker, job);
+			resString = mapper.writeValueAsString(res);
+			
+		} catch (Exception e) {
+			resStatus = HttpStatus.INTERNAL_SERVER_ERROR;
+			response.setHeader(XSTATUS_CODE, "500");
+			response.setHeader(XSTATUS_REASON, e.getMessage());
+			resString = getSimpleErrRes(e);
+			log.error("["+tid+"] status["+resStatus+"] ["+e+"]", e);	
+		} finally {
+			log.debug("["+tid+"]..........execTime("+(System.currentTimeMillis() - startTime)+")ms..........");
+		}
+		
+		return new ResponseEntity<String>(resString, resStatus);
+	}
+	
+	@RequestMapping(
+			value= URL_PREFIX+"/insert_spirits",
+			method={RequestMethod.POST}, 
+			produces="application/json;charset=utf-8")
+	public @ResponseBody ResponseEntity<String> insertSpirits(
+			Model model,
+			HttpServletRequest request,
+			HttpServletResponse response
+			){
+		long startTime = System.currentTimeMillis();
+		int tid = genTid();
+		String resString = "{}";
+		HttpStatus resStatus = HttpStatus.OK;
+		ObjectMapper mapper = ObjectMapperInstance.getInstance().getMapper();
+		
+		try {
+			log.debug("[" + tid + "].......... Start (" + genReqInfo(request) + ")  ..........");
+			
+			byte[] buf = getInputStreamToByte(request.getInputStream());
+			
+			LiquorDto liquor = mapper.readValue(buf, LiquorDto.class);
+			
+			log.debug("[" + tid + "][Insert Spirits Info]:" + liquor);
+			
+			BasicListResponse res = dataMgmtService.insertSpiritsInfo(tid, liquor);
 			resString = mapper.writeValueAsString(res);
 			
 		} catch (Exception e) {

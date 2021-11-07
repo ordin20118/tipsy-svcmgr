@@ -12,7 +12,7 @@
 	
 	<appender name="svc" class="org.apache.log4j.DailyRollingFileAppender">
 		<errorHandler class="org.apache.log4j.helpers.OnlyOnceErrorHandler" />
-		<param name="File" value="${catalina.home}/logs/allalcohol_web.log" />
+		<param name="File" value="${catalina.home}/logs/svcmgr.log" />
 		<param name="Threshold" value="DEBUG" />
 		<param name="Append" value="true" />
 		<param name="DatePattern" value="'.'yyyy-MM-dd" />
