@@ -52,7 +52,7 @@
 
 	$(document).ready(function() {
 
-		console.log("[Insert Beer Page is loaded]");
+		console.log("[Insert Spirits Page is loaded]");
 		setEvents();
 		previewFile();
 		loadCountry();
@@ -262,7 +262,7 @@
 					}
 					
 				} else {
-					alert("맥주 중복 조회 실패. 새로고침 해주세요.");
+					alert("중복 조회 실패. 새로고침 해주세요.");
 				}
 			},
 			error:function(request, status, error){
@@ -734,7 +734,7 @@
         <form name="sentMessage" id="insertBeerForm" novalidate>
           <div class="control-group form-group">
             <div class="controls">
-              <label style="color: #CC3D3D">맥주 이미지</br><span style="font-size: 12px";>( 흰 배경에 맥주 이미지만 있는 이미지, 특정 회사의 로고가 없는 이미지 ):</span></label></br>
+              <label style="color: #CC3D3D">이미지</br><span style="font-size: 12px";>( 흰 배경에 술의 이미지만 있는 이미지, 특정 회사의 로고가 없는 이미지 ):</span></label></br>
               <input type="file" id="image" accept="image/*" onchange="previewFile()" required data-validation-required-message="이미지를 입력해주세요.">
               <p class="help-block"></p>
               <img id="thumb" class="photo" height="50%" width="50%" alt="이미지 미리보기...">

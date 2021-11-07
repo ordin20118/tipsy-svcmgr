@@ -10,7 +10,7 @@
       <div class="collapse navbar-collapse" id="navbarResponsive">
         <ul class="navbar-nav ml-auto">
           <li class="nav-item">
-            <a class="nav-link" href="${path}/page/my_job.do">등록 이력 확인</a>
+            <a class="nav-link" href="${path}/manager/page/my_job">등록 이력 확인</a>
           </li>
           <!-- 
           <li class="nav-item">
@@ -28,8 +28,8 @@
               	데이터 입력
             </a>
             <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownPortfolio">
-              <a class="dropdown-item" href="${path}/page/insert_beer.do">Beer</a>
-              <a class="dropdown-item" href="${path}/page/insert_beer.do">Spirits</a>
+              <a class="dropdown-item" href="${path}/manager/page/insert_beer">Beer</a>
+              <a class="dropdown-item" href="${path}/manager/page/insert_beer">Spirits</a>
             </div>
           </li>
           <!--
