@@ -643,7 +643,7 @@
 		formData.append("imageType", 0)
 		formData.append("contentType", 100)
 
-		var url = prefix +"/api/upload_image.do";
+		var url = prefix +"/api/upload_image";
 
 		$.ajax({
 			url:url,

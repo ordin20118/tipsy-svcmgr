@@ -25,7 +25,7 @@
 	
 	
 	<!-- Application Loggers -->
-	<logger name="gwang.allalcohol.svc">
+	<logger name="tipsy.svcmgr">
 		<level value="debug" />
 		<!-- <appender-ref ref="console" /> -->
 		<appender-ref ref="console" />
@@ -41,7 +41,7 @@
 	
 	
 	<!-- 3rdparty Loggers -->
-	<logger name="org.springframework.core">
+	<!-- <logger name="org.springframework.core">
 		<level value="info" />
 		<appender-ref ref="console" />
 		<appender-ref ref="svc" />
@@ -63,7 +63,7 @@
 		<level value="info" />
 		<appender-ref ref="console" />
 		<appender-ref ref="svc" />
-	</logger>
+	</logger> -->
 
 
 
