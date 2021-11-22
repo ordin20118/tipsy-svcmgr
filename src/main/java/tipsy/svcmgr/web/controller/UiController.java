@@ -21,7 +21,6 @@ public class UiController {
 	
 	@RequestMapping(value= URL_PREFIX + "/home", method={RequestMethod.GET})
 	public String moveHomePage(Model model, HttpServletRequest request) {
-		//
 		return "home";
 	}
 	
