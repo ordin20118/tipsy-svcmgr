@@ -10,6 +10,4 @@ public class SearchResponseVO {
 	
 	private long took;
 	private String status;
-	private PaginationVO pagination;
-	private ArrayList<MetaResultVO> result;
 }

@@ -44,8 +44,7 @@ public class DataCollectApiController extends BasicController {
 	CountryService countryService;
 	
 	@Autowired
-	DataMgmtService dataMgmtService;
-	
+	DataMgmtService dataMgmtService;	
 	
 	
 	@RequestMapping(
@@ -359,53 +358,6 @@ public class DataCollectApiController extends BasicController {
 		return new ResponseEntity<String>(resString, resStatus);
 	}
 	
-	@RequestMapping(
-			value= URL_PREFIX + "/upload_image", 
-			method={RequestMethod.POST},
-			produces="application/json;charset=utf-8")
-	public @ResponseBody ResponseEntity<String> uploadImage(
-			Model model,
-			HttpServletRequest request,
-			HttpServletResponse response,
-			@ModelAttribute MultipartFile image,
-			@ModelAttribute ImageDto imageParam
-			){
-		long startTime = System.currentTimeMillis();
-		int tid = genTid();
-		String resString = "{}";
-		HttpStatus resStatus = HttpStatus.OK;
-		ObjectMapper mapper = ObjectMapperInstance.getInstance().getMapper();
-		try {
-			log.debug("[" + tid + "].......... Start (" + genReqInfo(request) + ")  ..........");
-			log.debug("[" + tid + "].......... Image (" + imageParam + ")  ..........");
-			
-			
-			
-//			ImageParam imageParam = new ImageParam();
-//			imageParam.setImageFile(image);
-//			imageParam.setName(request.getHeader("name"));
-//			imageParam.setContentId(request.getHeader("content_id"));
-//			imageParam.setContentType(request.getHeader("content_type"));
-			
-			imageParam.setImageFile(image);			
-			BasicListResponse res = dataMgmtService.uploadImage(tid, imageParam);
-			res.setState(BasicListResponse.STATE_SUCCESS);
-			
-			resString = mapper.writeValueAsString(res);
-			
-		} catch (Exception e) {
-			resStatus = HttpStatus.INTERNAL_SERVER_ERROR;
-			response.setHeader(XSTATUS_CODE, "500");
-			response.setHeader(XSTATUS_REASON, e.getMessage());
-			
-			resString = getSimpleErrRes(e);
-			log.error("["+tid+"] status["+resStatus+"] ["+e+"]", e);	
-		} finally {
-			log.debug("["+tid+"]..........execTime("+(System.currentTimeMillis() - startTime)+")ms..........");
-		}
-		
-		return new ResponseEntity<String>(resString, resStatus);
-	}
  
 
 	@RequestMapping(
