@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tipsy.svcmgr.web.dao.RawLiquorDao">
+
+	<select id="selectOne"  resultType="tipsy.svcmgr.web.dao.RawLiquorDto">
+		SELECT  * 
+		FROM    raw_liquor
+		WHERE	liquor_id = #{liquorId}
+	</select>
+	
+	<select id="selectByName"  resultType="tipsy.svcmgr.web.dao.RawLiquorDto">
+		SELECT  * 
+		FROM    raw_liquor
+		WHERE	name_kr like #{nameKr}
+	</select>
+
+	<select id="selectList"  resultType="tipsy.svcmgr.web.dao.RawLiquorDto">		
+		SELECT 
+			raw_liquor.*,
+		    categ1.name as category1_name,
+		    categ2.name as category2_name,
+		    categ3.name as category3_name,
+		    categ4.name as category4_name,
+		    country.name as country_name,
+		    reg_user.username as reg_admin_name,
+		    update_user.username as update_admin_name,
+		    if(image.path is null, 'default', image.path) as rep_img
+		FROM tipsy_raw.raw_liquor
+		LEFT OUTER JOIN raw_category categ1 ON categ1.id = raw_liquor.category1_id
+		LEFT OUTER JOIN raw_category categ2 ON categ2.id = raw_liquor.category2_id
+		LEFT OUTER JOIN raw_category categ3 ON categ3.id = raw_liquor.category3_id
+		LEFT OUTER JOIN raw_category categ4 ON categ4.id = raw_liquor.category4_id
+		LEFT OUTER JOIN country ON country.country_id = raw_liquor.country_id
+		LEFT OUTER JOIN auth_user reg_user ON reg_user.id = raw_liquor.reg_admin
+		LEFT OUTER JOIN auth_user update_user ON update_user.id = raw_liquor.update_admin
+		LEFT OUTER JOIN image ON image.content_id = raw_liquor.liquor_id AND image.content_type = 100 AND image.image_type = 0
+		<if test="liquorIds != null">
+			WHERE raw_liquor.liquor_id IN (
+				<foreach collection="liquorIds" item="item" index="index" open="" separator=","  close="">
+					#{item}
+				</foreach>
+			)
+		</if>
+		<include refid="common.sql.orderbyQuery" />
+		<include refid="common.sql.pagingQuery" />
+	</select>
+
+	
+	<select id="searchName"  resultType="tipsy.svcmgr.web.dao.RawLiquorDto">
+		SELECT   * 
+		FROM     raw_liquor
+		WHERE	 LOWER(name_en) = LOWER(#{keyword})
+	</select>
+
+</mapper>

@@ -14,9 +14,9 @@
 
 	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
 		<property name="driverClassName"	value="org.mariadb.jdbc.Driver" />	
-		<property name="url"            	value="jdbc:mariadb://119.205.221.220:3306/all_alcohol?characterEncoding=utf-8&amp;useUnicode=true&amp;zeroDateTimeBehavior=convertToNull&amp;allowMultiQueries=true" />
-		<property name="username"       	value="alcohol_master" />
-		<property name="password"       	value="rer1625vq" />
+		<property name="url"            	value="jdbc:mariadb://211.37.150.105:3306/tipsy_raw?characterEncoding=utf-8&amp;useUnicode=true&amp;zeroDateTimeBehavior=convertToNull&amp;allowMultiQueries=true" />
+		<property name="username"       	value="pangho" />
+		<property name="password"       	value="Rer1625vq!" />
 		
 		<property name="defaultAutoCommit" 	value="true" />
 		<property name="maxActive" 			value="100" />
@@ -36,12 +36,10 @@
 	</property></bean>
 	
 	
-	
-		
 	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
 		<property name="dataSource" ref="dataSource" />
 		<property name="configLocation"  value="classpath:tipsy/svcmgr/web/dao/mapper/mybatis-config.xml"></property>
-		<property name="mapperLocations" value="classpath*:tipsy/svcmgr/web/dao/mapper/*_mapper.xml"/>
+		<property name="mapperLocations" value="classpath*:tipsy/svcmgr/*/dao/mapper/*_mapper.xml"/>
 	</bean>
 	
 	

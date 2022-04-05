@@ -73,7 +73,7 @@
 		
 	<select id="selectAll"  resultType="tipsy.svcmgr.web.dao.CategoryDto">
 		SELECT   * 
-		FROM     category
+		FROM     raw_category
 	</select>
 
 	<delete id="deleteAll">

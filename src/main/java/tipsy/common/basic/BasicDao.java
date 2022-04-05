@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.List;
 
+import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 
@@ -75,6 +76,18 @@ private SqlSessionFactory sqlSessionFactory;
 		try {
 			sSession = sqlSessionFactory.openSession();
 			return sSession.selectOne(statement, parameter);
+		} catch (Exception e) {
+			throw new GenException(GenException.DB_UPDATE_ERROR, e.getMessage() + " select error. ["+statement+"]["+parameter+"] ", e);
+		} finally {
+			close(sSession);
+		}
+	}
+	
+	public void runSelectStatement(String statement, Object parameter, ResultHandler handler) throws GenException {
+		SqlSession sSession = null;
+		try {
+			sSession = sqlSessionFactory.openSession();
+			sSession.select(statement, parameter, handler);
 		} catch (Exception e) {
 			throw new GenException(GenException.DB_UPDATE_ERROR, e.getMessage() + " select error. ["+statement+"]["+parameter+"] ", e);
 		} finally {
