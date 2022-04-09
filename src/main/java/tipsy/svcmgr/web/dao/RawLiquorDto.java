@@ -18,6 +18,10 @@ public class RawLiquorDto extends AbstractSearchParam {
 	public static final int TYPE_CAN			= 1; 	// 캔
 	public static final int TYPE_PLASTIC		= 2; 	// 패트병
 	
+	public static final int SITE_INTERNAL		= 0;
+	public static final int SITE_WHISKYCOM		= 1;
+	public static final int SITE_KANAWINE		= 2;
+	
 	private Integer	liquorId;
 	private String 	nameKr;
 	private String	nameEn;
@@ -37,6 +41,8 @@ public class RawLiquorDto extends AbstractSearchParam {
 	private Float	price;
 	private String 	description;
 	private String	history;
+	private	Integer	site;
+	private String	url;
 	private Date 	regDate;
 	private Date 	updateDate;
 	

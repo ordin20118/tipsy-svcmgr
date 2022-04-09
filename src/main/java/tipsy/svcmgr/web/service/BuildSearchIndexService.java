@@ -54,8 +54,7 @@ public class BuildSearchIndexService {
 	@Autowired
 	private CountryDao countryDao;
 	
-	
-	
+		
 	public synchronized void test(int id) {
 		ESManagerForBatch.getInstance().requestTest();
 	}
@@ -99,6 +98,30 @@ public class BuildSearchIndexService {
 							
 							EsRawLiquorVo esLiquorInfo = new EsRawLiquorVo();
 							
+							esLiquorInfo.setLiquorId(liquorInfo.getLiquorId());
+							esLiquorInfo.setNameKr(liquorInfo.getNameKr());
+							esLiquorInfo.setNameEn(liquorInfo.getNameEn());
+							esLiquorInfo.setUploadState(liquorInfo.getUploadState());
+							esLiquorInfo.setUpdateState(liquorInfo.getUpdateState());
+							
+							if(liquorInfo.getVintage() != null) {
+								esLiquorInfo.setVintage(liquorInfo.getVintage());	
+							}
+							
+							esLiquorInfo.setAbv(liquorInfo.getAbv());
+							
+							if(liquorInfo.getDescription() != null && liquorInfo.getDescription().length() > 0) {
+								esLiquorInfo.setDescription(liquorInfo.getDescription());
+							}
+							
+							if(liquorInfo.getHistory() != null && liquorInfo.getHistory().length() > 0) {
+								esLiquorInfo.setHistory(liquorInfo.getHistory());
+							}
+							
+							if(liquorInfo.getRepImg() != null && liquorInfo.getRepImg().length() > 0) {
+								esLiquorInfo.setRepImg(liquorInfo.getRepImg());
+							}							
+							
 							esLiquorInfo.setCategory1Id(liquorInfo.getCategory1Id());
 							esLiquorInfo.setCategory2Id(liquorInfo.getCategory2Id());							
 							esLiquorInfo.setCategory1Name(liquorInfo.getCategory1Name());
@@ -112,6 +135,11 @@ public class BuildSearchIndexService {
 								esLiquorInfo.setCategory4Name(liquorInfo.getCategory4Name());
 							}
 							
+							esLiquorInfo.setSite(liquorInfo.getSite());
+							if(liquorInfo.getUrl() != null && liquorInfo.getUrl().length() > 0) {
+								esLiquorInfo.setUrl(liquorInfo.getUrl());
+							}							
+							
 							esLiquorInfo.setEsUpdateDate(new Date());
 							
 							esLiquorInfo.setProcCode(procCode);
@@ -119,6 +147,15 @@ public class BuildSearchIndexService {
 							
 							esLiquorInfo.setCountryName(liquorInfo.getCountryName());
 							esLiquorInfo.setCountryId(liquorInfo.getCountryId());
+							
+							
+							esLiquorInfo.setRegAdmin(liquorInfo.getRegAdmin());
+							esLiquorInfo.setRegAdminName(liquorInfo.getRegAdminName());
+							
+							if(liquorInfo.getUpdateAdmin() != null) {
+								esLiquorInfo.setUpdateAdmin(liquorInfo.getUpdateAdmin());
+								esLiquorInfo.setUpdateAdminName(liquorInfo.getUpdateAdminName());
+							}
 								
 							list.add(esLiquorInfo);
 						}

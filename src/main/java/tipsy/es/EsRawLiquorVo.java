@@ -40,6 +40,9 @@ public class EsRawLiquorVo {
 	private String 	description;
 	private String	history;
 	
+	private Integer site;
+	private String	url;
+	
 	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ssZ",  timezone="Asia/Seoul")
 	private Date 	regDate;
 	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ssZ",  timezone="Asia/Seoul")
@@ -51,8 +54,8 @@ public class EsRawLiquorVo {
 	private String	updateAdminName;
 
 	// sub data
-	private String 	dispCountry;
-	private String 	dispCategory;
+	//private String 	dispCountry;
+	//private String 	dispCategory;
 	
 	// join data
 	private String	countryName;

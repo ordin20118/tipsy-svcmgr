@@ -126,6 +126,12 @@ curl -H 'Content-Type: application/json' -XPUT 'http://localhost:9200/raw_liquor
       "price": {
         "type": "double"
       },
+      "site": {
+        "type": "integer"
+      },
+      "url": {
+        "type": "keyword"
+      },
       "reg_date": {
         "type": "date",
         "format": "yyyy-MM-dd HH:mm:ssZ||yyyy-MM-dd||epoch_millis"
