@@ -1,4 +1,4 @@
-package tipsy.svcmgr.web.service;
+package tipsy.svcmgr.web.search;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -84,7 +84,7 @@ public class BuildSearchIndexService {
 			}
 			
 			int[] rowCount = {0};
-			rawDataManualDao.runSelectStatement("tipsy.svcmgr.web.dao.RawLiquorDao.selectList", param, new ResultHandler() {
+			rawDataManualDao.runSelectStatement("tipsy.svcmgr.web.dao.RawLiquorDao.selectListByIds", param, new ResultHandler() {
 				
 				@Override
 				public void handleResult(ResultContext context) {

@@ -14,12 +14,29 @@ curl -H 'Content-Type: application/json' -XPUT 'http://localhost:9200/raw_liquor
             	"letter",
             	"whitespace"
             ]
+          },
+          "en_tk": {
+            "type": "ngram",
+            "min_gram": "3",
+            "max_gram": "4",
+            "token_chars": [
+            	"letter",
+            	"whitespace"
+            ]
           }
         },
         "analyzer": {
           "basic_ana": {
             "type": "custom",
-            "tokenizer": "standard",
+            "tokenizer": "basic_tk",
+            "filter": [
+              "lowercase"
+            ],
+            "char_filter": []
+          },
+          "en_ana": {
+            "type": "custom",
+            "tokenizer": "en_tk",
             "filter": [
               "lowercase"
             ],
@@ -112,7 +129,7 @@ curl -H 'Content-Type: application/json' -XPUT 'http://localhost:9200/raw_liquor
       },
       "name_en": {
         "type": "text",
-        "analyzer": "basic_ana"
+        "analyzer": "en_ana"
       },
       "proc_code": {
         "type": "keyword"
@@ -145,10 +162,10 @@ curl -H 'Content-Type: application/json' -XPUT 'http://localhost:9200/raw_liquor
         "format": "yyyy-MM-dd HH:mm:ssZ||yyyy-MM-dd||epoch_millis"
       },
       "update_state": {
-        "type": "long"
+        "type": "integer"
       },
       "upload_state": {
-        "type": "long"
+        "type": "integer"
       },      
       "reg_admin": {
         "type": "integer"

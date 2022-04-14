@@ -25,7 +25,7 @@ public interface CategoryDao {
 	
 	public List<CategoryDto> selectAll();
 	
-	public List<RawCategoryDto> selectRawCateg();
+	public List<RawCategDto> selectRawCateg();
 	
 
 }

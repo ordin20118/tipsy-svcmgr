@@ -1,4 +1,4 @@
-package tipsy.svcmgr.web.controller;
+package tipsy.svcmgr.web.search;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -17,29 +17,33 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import tipsy.common.basic.BasicController;
+import tipsy.common.basic.BasicListResponse;
 import tipsy.common.basic.ObjectMapperInstance;
 import tipsy.common.configuration.LoggerName;
+import tipsy.svcmgr.web.controller.param.WebSearchParam;
 import tipsy.svcmgr.web.search.BuildSearchIndexService;
+import tipsy.svcmgr.web.search.SearchService.SearchResultVo;
 
 
 @Controller
-public class EsManageApiController extends BasicController {
+public class SearchApiController extends BasicController {
 
 	private static final String URL_PREFIX = "api";
 	
 	Logger log = LoggerFactory.getLogger(LoggerName.SVC);
 	
 	@Autowired
-	BuildSearchIndexService buildSearchIndexService;
+	SearchService searchService;
 	
 	@RequestMapping(
-			value= URL_PREFIX+"/bulk_raw_liquor",
+			value= URL_PREFIX+"/search",
 			method={RequestMethod.GET}, 
 			produces="application/json;charset=utf-8")
-	public @ResponseBody ResponseEntity<String> uploadRawLiquor(
+	public @ResponseBody ResponseEntity<String> search(
 			Model model,
 			HttpServletRequest request,
-			HttpServletResponse response
+			HttpServletResponse response,
+			WebSearchParam searchParam
 			){
 		long startTime = System.currentTimeMillis();
 		int tid = genTid();
@@ -49,12 +53,18 @@ public class EsManageApiController extends BasicController {
 		
 		try {
 			
-			log.debug("[" + tid + "].......... Start (" + genReqInfo(request) + ")  ..........");
-						
-			buildSearchIndexService.buildRawLiquorInfo(tid, null);
+			log.debug("[" + tid + "] .......... Start (" + genReqInfo(request) + ") ..........");
+			log.debug("[" + tid + "] .......... searchParam(" + searchParam + ") ..........");
 			
-//			BasicListResponse res = countryService.getCountryList(tid);
-//			resString = mapper.writeValueAsString(res);
+			BasicListResponse res = new BasicListResponse();
+			SearchResultVo sRes = searchService.searchRawLiquor(tid, searchParam);
+			
+			//log.debug("[" + tid + "] .......... res(" + sRes + ") ..........");
+			
+			res.setData(sRes);
+			res.setSParam(searchParam);
+			
+			resString = mapper.writeValueAsString(res);
 			
 		} catch (Exception e) {
 			resStatus = HttpStatus.INTERNAL_SERVER_ERROR;

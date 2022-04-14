@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 
 import tipsy.common.configuration.Configuration;
 import tipsy.common.configuration.LoggerName;
-import tipsy.svcmgr.web.service.BuildSearchIndexService;
+import tipsy.svcmgr.web.search.BuildSearchIndexService;
 
 
 @Component

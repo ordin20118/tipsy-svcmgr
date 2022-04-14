@@ -80,7 +80,7 @@
 		DELETE FROM category
 	</delete>
 		
-	<select id="selectRawCateg"  resultType="tipsy.svcmgr.web.dao.RawCategoryDto">
+	<select id="selectRawCateg"  resultType="tipsy.svcmgr.web.dao.RawCategDto">
 		SELECT   * 
 		FROM     raw_category
 	</select>

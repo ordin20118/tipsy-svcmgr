@@ -14,7 +14,7 @@
 		WHERE	name_kr like #{nameKr}
 	</select>
 
-	<select id="selectList"  resultType="tipsy.svcmgr.web.dao.RawLiquorDto">		
+	<select id="selectListByIds"  resultType="tipsy.svcmgr.web.dao.RawLiquorDto">		
 		SELECT 
 			raw_liquor.*,
 		    categ1.name as category1_name,
@@ -41,10 +41,19 @@
 				</foreach>
 			)
 		</if>
-		<include refid="common.sql.orderbyQuery" />
-		<include refid="common.sql.pagingQuery" />
+		<if test="liquorIds != null">
+			ORDER BY FIELD(raw_liquor.liquor_id, 
+				<foreach collection="liquorIds" item="item" index="index" open="" separator=","  close="">
+					#{item}
+				</foreach>
+			)
+		</if>		
+		
+		<!-- <include refid="common.sql.orderbyQuery" />
+		<include refid="common.sql.pagingQuery" /> -->
 	</select>
-
+	
+	
 	
 	<select id="searchName"  resultType="tipsy.svcmgr.web.dao.RawLiquorDto">
 		SELECT   * 

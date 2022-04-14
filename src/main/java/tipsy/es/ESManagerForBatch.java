@@ -33,7 +33,7 @@ public class ESManagerForBatch {
     }
     
     private Logger log = LoggerFactory.getLogger(LoggerName.SVC);  
-    
+        
     public void requestTest() {
     	
 //    	ElasticsearchClient client = null;
