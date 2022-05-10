@@ -13,7 +13,7 @@ import tipsy.common.configuration.LoggerName;
 
 @Controller
 public class UiController {
- 
+  
 	private static final String URL_PREFIX = "page";
 	
 	Logger log = LoggerFactory.getLogger(LoggerName.SVC);
