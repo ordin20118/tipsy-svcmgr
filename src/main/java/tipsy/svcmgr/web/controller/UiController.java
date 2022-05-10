@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 
 import tipsy.common.configuration.LoggerName;
 
-
 @Controller
 public class UiController {
 
