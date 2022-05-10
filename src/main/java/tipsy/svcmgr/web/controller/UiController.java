@@ -15,7 +15,7 @@ import tipsy.common.configuration.LoggerName;
 public class UiController {
    
 	private static final String URL_PREFIX = "page";
-	
+	 
 	Logger log = LoggerFactory.getLogger(LoggerName.SVC);
 	
 	@RequestMapping(value= URL_PREFIX + "/home", method={RequestMethod.GET})
