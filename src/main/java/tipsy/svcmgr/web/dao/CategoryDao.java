@@ -2,11 +2,9 @@ package tipsy.svcmgr.web.dao;
 
 import java.util.List;
 
-import javax.annotation.Resource;
-
 import org.apache.ibatis.annotations.Param;
 
-@Resource(name="CategoryDao")
+
 public interface CategoryDao {
 	
 	public Integer insert(CategoryDto category);

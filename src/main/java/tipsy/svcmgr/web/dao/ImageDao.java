@@ -2,11 +2,8 @@ package tipsy.svcmgr.web.dao;
 
 import java.util.List;
 
-import javax.annotation.Resource;
-
 import org.apache.ibatis.annotations.Param;
 
-@Resource(name="ImageDao")
 public interface ImageDao {
 	
 	public Integer insert(ImageDto image);

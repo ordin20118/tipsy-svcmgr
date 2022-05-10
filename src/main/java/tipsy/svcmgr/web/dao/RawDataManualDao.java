@@ -2,8 +2,6 @@ package tipsy.svcmgr.web.dao;
 
 import java.util.List;
 
-import javax.annotation.Resource;
-
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.stereotype.Repository;
 
@@ -17,7 +15,7 @@ public class RawDataManualDao extends BasicDao {
 
 	public static final String PREFIX = "tom.revupia.cacheupdater.dao.RawDataDao";
 	
-	@Resource(name = "sqlSessionFactory")
+	//@Resource(name = "sqlSessionFactory")
 	public void setSqlSessionFactory(SqlSessionFactory sqlSessionFactory) {
 		super.setSqlSessionFactory(sqlSessionFactory);
 	}
