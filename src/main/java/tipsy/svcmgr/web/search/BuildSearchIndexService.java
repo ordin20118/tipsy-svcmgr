@@ -93,9 +93,7 @@ public class BuildSearchIndexService {
 					rowCount[0]++;
 					
 					try {
-						
-						log.debug("buildRawLiquorInfo");
-						
+												
 						RawLiquorDto liquorInfo = (RawLiquorDto)context.getResultObject();						
 						
 						if(true) {	// null data check
@@ -295,7 +293,7 @@ public class BuildSearchIndexService {
 			
 			if(list.size() > 0) {
 								
-				ESManagerForBatch.getInstance().createOrUpdateBulk(ESManagerForLiquorSearch.INDEX_RAW_LIQUOR_INFO, list, null);
+				ESManagerForBatch.getInstance().createOrUpdateBulk(ESManagerForLiquorSearch.INDEX_INGREDIENT, list, null);
 				list.clear();
 				log.info("["+tid+"] update ingredient info ["+rowCount[0]+"]");
 			}
@@ -309,8 +307,7 @@ public class BuildSearchIndexService {
 			}
 			
 		} catch (Exception e) {
-			e.printStackTrace();
-			//log.info("["+tid+"] buildIngredient " + e, e);
+			log.info("["+tid+"] buildIngredient " + e, e);
 		}
 	}
 	

@@ -3,6 +3,7 @@ package tipsy.svcmgr.web.dao;
 import java.util.List;
 
 import org.apache.ibatis.annotations.Param;
+import org.springframework.stereotype.Repository;
 
 public interface RawLiquorDao {
 	

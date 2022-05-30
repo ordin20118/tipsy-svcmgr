@@ -25,8 +25,8 @@ public class EsSyncScheduler {
 	private BuildSearchIndexService buildSearchIndexService;
 	
 	//매일 18시 05분에 실행>> UTC18시 - 한국시간 새벽3시.
-	//@Scheduled(cron="0 05 18 * * *")
-	@Scheduled(fixedDelay=3000)
+	@Scheduled(cron="0 05 18 * * *")
+	//@Scheduled(fixedDelay=5000)
 	public void syncEsWithRDB () {
 		
 		int tid = (new Random()).nextInt(10000);
@@ -41,14 +41,9 @@ public class EsSyncScheduler {
 		try {
 			
 			log.debug("[Sync RawData to ES]");
-			
-			List<Integer> testList = new ArrayList<>();
-			testList.add(1);
-			testList.add(2);
-			testList.add(3);
-			
-			buildSearchIndexService.buildRawLiquorInfo(tid, testList);
-			//buildSearchIndexService.buildIngredient(tid, null);
+						
+			buildSearchIndexService.buildRawLiquorInfo(tid, null);
+			buildSearchIndexService.buildIngredient(tid, null);
 						
 		} catch (Exception e) {
 			Method nowmethod = new Object(){}.getClass().getEnclosingMethod();

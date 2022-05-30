@@ -27,14 +27,21 @@
 	</bean>
 	
 	
-	<bean class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
-    <property name="alwaysUseFullPath" value="true">
-	</property></bean>
-	 
+	<!-- deprecated -->
+	<!-- <bean class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter"> 
+	
+		    <property name="alwaysUseFullPath" value="true">
+			</property>
+		</bean>
+	-->
+	
+	
+	<!-- deprecated 
 	<bean class="org.springframework.web.servlet.mvc.annotation.DefaultAnnotationHandlerMapping">
 	    <property name="alwaysUseFullPath" value="true">
-	</property></bean>
-	
+		</property>
+	</bean>
+	 -->
 	
 	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
 		<property name="dataSource" ref="dataSource" />

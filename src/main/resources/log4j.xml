@@ -27,14 +27,13 @@
 	<!-- Application Loggers -->
 	<logger name="tipsy.svcmgr">
 		<level value="debug" />
-		<!-- <appender-ref ref="console" /> -->
-		<!-- <appender-ref ref="console" /> -->
+		<appender-ref ref="console" />
 		<appender-ref ref="svc" />
 	</logger>
 	
 	<logger name="jdbc.sqlonly" additivity="false">
 		<level value="error"/> 
-		<!-- <appender-ref ref="console"/> -->
+		<appender-ref ref="console"/>
 		<appender-ref ref="svc" />
 	</logger>
 	

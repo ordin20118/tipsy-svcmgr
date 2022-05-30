@@ -9,13 +9,18 @@ import java.util.List;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import tipsy.common.util.GenException;
 
 
 public class BasicDao {
 
-private SqlSessionFactory sqlSessionFactory;
+	
+	@Autowired
+	private SqlSession sqlSession;
+	
+	private SqlSessionFactory sqlSessionFactory;
 	
 	public void setSqlSessionFactory(SqlSessionFactory sqlSessionFactory) {
 		this.sqlSessionFactory = sqlSessionFactory;
@@ -86,8 +91,9 @@ private SqlSessionFactory sqlSessionFactory;
 	public void runSelectStatement(String statement, Object parameter, ResultHandler handler) throws GenException {
 		SqlSession sSession = null;
 		try {
-			sSession = sqlSessionFactory.openSession();
-			sSession.select(statement, parameter, handler);
+
+			sqlSession.select(statement, parameter, handler);
+			
 		} catch (Exception e) {
 			throw new GenException(GenException.DB_UPDATE_ERROR, e.getMessage() + " select error. ["+statement+"]["+parameter+"] ", e);
 		} finally {

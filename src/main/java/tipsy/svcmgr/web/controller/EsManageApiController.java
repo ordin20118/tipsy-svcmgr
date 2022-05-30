@@ -19,6 +19,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import tipsy.common.basic.BasicController;
 import tipsy.common.basic.ObjectMapperInstance;
 import tipsy.common.configuration.LoggerName;
+import tipsy.svcmgr.web.dao.RawLiquorDao;
+import tipsy.svcmgr.web.dao.RawLiquorDto;
 import tipsy.svcmgr.web.search.BuildSearchIndexService;
 
 
@@ -31,6 +33,9 @@ public class EsManageApiController extends BasicController {
 	
 	@Autowired
 	BuildSearchIndexService buildSearchIndexService;
+	
+	@Autowired
+	public RawLiquorDao dao;
 	
 	@RequestMapping(
 			value= URL_PREFIX+"/bulk_raw_liquor",
@@ -55,6 +60,43 @@ public class EsManageApiController extends BasicController {
 			
 //			BasicListResponse res = countryService.getCountryList(tid);
 //			resString = mapper.writeValueAsString(res);
+			
+		} catch (Exception e) {
+			resStatus = HttpStatus.INTERNAL_SERVER_ERROR;
+			response.setHeader(XSTATUS_CODE, "500");
+			response.setHeader(XSTATUS_REASON, e.getMessage());
+			resString = getSimpleErrRes(e);
+			log.error("["+tid+"] status["+resStatus+"] ["+e+"]", e);	
+		} finally {
+			log.debug("["+tid+"]..........execTime("+(System.currentTimeMillis() - startTime)+")ms..........");
+		}
+		
+		return new ResponseEntity<String>(resString, resStatus);
+	}
+	
+	@RequestMapping(
+			value= URL_PREFIX+"/test",
+			method={RequestMethod.GET}, 
+			produces="application/json;charset=utf-8")
+	public @ResponseBody ResponseEntity<String> test(
+			Model model,
+			HttpServletRequest request,
+			HttpServletResponse response
+			){
+		long startTime = System.currentTimeMillis();
+		int tid = genTid();
+		String resString = "{}";
+		HttpStatus resStatus = HttpStatus.OK;
+		ObjectMapper mapper = ObjectMapperInstance.getInstance().getMapper();
+		
+		try {
+			
+			log.debug("[" + tid + "].......... Start (" + genReqInfo(request) + ")  ..........");
+			
+			RawLiquorDto liquor = dao.selectOne(1);
+			
+			log.debug("["+liquor+"]");
+			
 			
 		} catch (Exception e) {
 			resStatus = HttpStatus.INTERNAL_SERVER_ERROR;
