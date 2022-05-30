@@ -25,11 +25,13 @@ import tipsy.common.basic.ObjectMapperInstance;
 import tipsy.common.configuration.LoggerName;
 import tipsy.es.ESManagerForBatch;
 import tipsy.es.ESManagerForLiquorSearch;
+import tipsy.es.EsIngredientVo;
 import tipsy.es.EsRawLiquorVo;
 import tipsy.svcmgr.helper.CategInstance;
 import tipsy.svcmgr.helper.CountryInstance;
 import tipsy.svcmgr.web.dao.CountryDao;
 import tipsy.svcmgr.web.dao.CountryDto;
+import tipsy.svcmgr.web.dao.IngredientDto;
 import tipsy.svcmgr.web.dao.LiquorDao;
 import tipsy.svcmgr.web.dao.RawCategDao;
 import tipsy.svcmgr.web.dao.RawCategDto;
@@ -91,6 +93,8 @@ public class BuildSearchIndexService {
 					rowCount[0]++;
 					
 					try {
+						
+						log.debug("buildRawLiquorInfo");
 						
 						RawLiquorDto liquorInfo = (RawLiquorDto)context.getResultObject();						
 						
@@ -191,6 +195,122 @@ public class BuildSearchIndexService {
 			
 		} catch (Exception e) {
 			log.info("["+tid+"] buildRawLiquorInfo " + e, e);
+		}
+	}
+	
+	
+	
+	
+	public synchronized void buildIngredient(int tid, List<Integer> ingdIds) {
+	
+		
+		try {
+			SimpleDateFormat sdfYear = new SimpleDateFormat("yyyy");
+			ObjectMapper mapper = ObjectMapperInstance.getInstance().getMapper();
+			
+			byte[] ranBytes = new byte[8];
+			(new Random()).nextBytes(ranBytes);
+			String procCode = new String(Hex.encode(ranBytes));
+						
+			List<RawCategDto>   categList   = CategInstance.getInstance().getAllCateg(rawCategDao);			
+			Map<Integer, RawCategDto> categMap  = categList.stream().collect(Collectors.toMap(RawCategDto::getId, Function.identity()));
+			
+			List<Object> list = new ArrayList<Object>();
+			HashMap<String, Object> param = new HashMap<>();			
+			if(ingdIds != null && ingdIds.size() > 0) {
+				param.put("ingdIds", ingdIds);
+			}
+			
+			int[] rowCount = {0};
+			rawDataManualDao.runSelectStatement("tipsy.svcmgr.web.dao.IngredientDao.selectListByIds", param, new ResultHandler() {
+				
+				@Override
+				public void handleResult(ResultContext context) {
+					rowCount[0]++;
+					
+					try {
+						
+						IngredientDto ingredient = (IngredientDto)context.getResultObject();						
+						
+						if(true) {	// null data check
+							
+							EsIngredientVo esIngdInfo = new EsIngredientVo();
+							
+							esIngdInfo.setIngdId(ingredient.getIngdId());
+							esIngdInfo.setNameKr(ingredient.getNameKr());
+							esIngdInfo.setNameEn(ingredient.getNameEn());
+							esIngdInfo.setUploadState(ingredient.getUploadState());
+							esIngdInfo.setUpdateState(ingredient.getUpdateState());
+							
+							if(ingredient.getDescription() != null && ingredient.getDescription().length() > 0) {
+								esIngdInfo.setDescription(ingredient.getDescription());
+							}
+							
+							if(ingredient.getRepImg() != null && ingredient.getRepImg().length() > 0) {
+								esIngdInfo.setRepImg(ingredient.getRepImg());
+							}							
+							
+							esIngdInfo.setCategory1Id(ingredient.getCategory1Id());
+							esIngdInfo.setCategory2Id(ingredient.getCategory2Id());							
+							esIngdInfo.setCategory1Name(ingredient.getCategory1Name());
+							esIngdInfo.setCategory2Name(ingredient.getCategory2Name());
+							
+							if(ingredient.getCategory3Id() != null) {
+								esIngdInfo.setCategory3Id(ingredient.getCategory3Id());
+								esIngdInfo.setCategory3Name(ingredient.getCategory3Name());
+							} else if(ingredient.getCategory4Id() != null) {
+								esIngdInfo.setCategory4Id(ingredient.getCategory4Id());
+								esIngdInfo.setCategory4Name(ingredient.getCategory4Name());
+							}				
+							
+							esIngdInfo.setEsUpdateDate(new Date());
+							
+							esIngdInfo.setProcCode(procCode);
+							esIngdInfo.setRegDate(ingredient.getRegDate());	
+							
+							esIngdInfo.setRegAdmin(ingredient.getRegAdmin());
+							esIngdInfo.setRegAdminName(ingredient.getRegAdminName());
+							
+							if(ingredient.getUpdateAdmin() != null) {
+								esIngdInfo.setUpdateAdmin(ingredient.getUpdateAdmin());
+								esIngdInfo.setUpdateAdminName(ingredient.getUpdateAdminName());
+							}
+								
+							list.add(esIngdInfo);
+						}
+						
+						
+						if(list.size() >= 200) {
+							ESManagerForBatch.getInstance().createOrUpdateBulk(ESManagerForLiquorSearch.INDEX_INGREDIENT, list, null);	
+							list.clear();
+							log.debug("["+tid+"] update ingredient info ["+rowCount[0]+"]");							
+						}
+						
+						
+					} catch (Exception e) {
+						log.error("["+tid+"] handleResult error " + e);
+					}
+				}
+			});
+			
+			if(list.size() > 0) {
+								
+				ESManagerForBatch.getInstance().createOrUpdateBulk(ESManagerForLiquorSearch.INDEX_RAW_LIQUOR_INFO, list, null);
+				list.clear();
+				log.info("["+tid+"] update ingredient info ["+rowCount[0]+"]");
+			}
+			
+			log.info("["+tid+"] update ingredient DONE ["+rowCount[0]+"]");			
+			
+			
+			if(ingdIds == null || ingdIds.size() == 0) {
+				//BulkByScrollResponse delRes = ESManagerForBatch.getInstance().deleteByProcCode(ESManagerForLiquorSearch.INDEX_RAW_LIQUOR_INFO, procCode);
+				//log.info("["+tid+"] delete Old procCode["+procCode+"] ["+delRes+"]");					
+			}
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+			//log.info("["+tid+"] buildIngredient " + e, e);
 		}
 	}
 	

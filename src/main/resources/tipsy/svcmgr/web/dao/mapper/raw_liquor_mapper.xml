@@ -34,20 +34,22 @@
 		LEFT OUTER JOIN auth_user reg_user ON reg_user.id = raw_liquor.reg_admin
 		LEFT OUTER JOIN auth_user update_user ON update_user.id = raw_liquor.update_admin
 		LEFT OUTER JOIN image ON image.content_id = raw_liquor.liquor_id AND image.content_type = 100 AND image.image_type = 0
-		<if test="liquorIds != null">
-			WHERE raw_liquor.liquor_id IN (
-				<foreach collection="liquorIds" item="item" index="index" open="" separator=","  close="">
-					#{item}
-				</foreach>
-			)
-		</if>
-		<if test="liquorIds != null">
-			ORDER BY FIELD(raw_liquor.liquor_id, 
-				<foreach collection="liquorIds" item="item" index="index" open="" separator=","  close="">
-					#{item}
-				</foreach>
-			)
-		</if>		
+		<where>
+			<if test="liquorIds != null">
+				WHERE raw_liquor.liquor_id IN (
+					<foreach collection="liquorIds" item="item" index="index" open="" separator=","  close="">
+						#{item}
+					</foreach>
+				)
+			</if>
+			<if test="liquorIds != null">
+				ORDER BY FIELD(raw_liquor.liquor_id, 
+					<foreach collection="liquorIds" item="item" index="index" open="" separator=","  close="">
+						#{item}
+					</foreach>
+				)
+			</if>
+		</where>
 		
 		<!-- <include refid="common.sql.orderbyQuery" />
 		<include refid="common.sql.pagingQuery" /> -->
