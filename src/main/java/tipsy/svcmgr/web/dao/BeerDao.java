@@ -1,12 +1,8 @@
 package tipsy.svcmgr.web.dao;
 
 import java.util.List;
-
-import javax.annotation.Resource;
-
 import org.apache.ibatis.annotations.Param;
 
-@Resource(name="BeerDao")
 public interface BeerDao {
 	
 	public int insert(BeerDto beer);

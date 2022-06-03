@@ -73,14 +73,14 @@
 		
 	<select id="selectAll"  resultType="tipsy.svcmgr.web.dao.CategoryDto">
 		SELECT   * 
-		FROM     category
+		FROM     raw_category
 	</select>
 
 	<delete id="deleteAll">
 		DELETE FROM category
 	</delete>
 		
-	<select id="selectRawCateg"  resultType="tipsy.svcmgr.web.dao.RawCategoryDto">
+	<select id="selectRawCateg"  resultType="tipsy.svcmgr.web.dao.RawCategDto">
 		SELECT   * 
 		FROM     raw_category
 	</select>

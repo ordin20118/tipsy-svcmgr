@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <tomahawk>
 	<serverName>Tipsy</serverName>
-	
 
 	<extras>
-		
 		
 		<!-- 
 		<field name="test.String"    type="string">testString</field>
@@ -13,6 +11,11 @@
 		<field name="test.Double"    type="double">1000.054</field>
 		-->
 		<field name="datapath.image"    type="string">/Users/gwanga/datastore/image</field>
+		
+		<field name="es.host"    		type="string">211.37.150.105</field>
+		<field name="es.port"    		type="integer">9200</field>
+		<field name="es.schema"  		type="string">http</field>
+		<field name="enable.es.sync"  	type="string">true</field>
 		
 		
 	</extras>

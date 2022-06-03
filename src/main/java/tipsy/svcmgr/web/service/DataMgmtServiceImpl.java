@@ -19,7 +19,6 @@ import tipsy.common.basic.BasicListResponse;
 import tipsy.common.configuration.Configuration;
 import tipsy.common.configuration.LoggerName;
 import tipsy.common.util.ImageResizer;
-import tipsy.svcmgr.web.controller.param.ImageParam;
 import tipsy.svcmgr.web.controller.param.PagingParam;
 import tipsy.svcmgr.web.dao.AdminDao;
 import tipsy.svcmgr.web.dao.AdminDto;
@@ -27,8 +26,6 @@ import tipsy.svcmgr.web.dao.BeerDao;
 import tipsy.svcmgr.web.dao.BeerDto;
 import tipsy.svcmgr.web.dao.CategoryDao;
 import tipsy.svcmgr.web.dao.CategoryDto;
-import tipsy.svcmgr.web.dao.CountryDao;
-import tipsy.svcmgr.web.dao.CountryDto;
 import tipsy.svcmgr.web.dao.ImageDao;
 import tipsy.svcmgr.web.dao.ImageDto;
 import tipsy.svcmgr.web.dao.LiquorDao;
@@ -39,7 +36,7 @@ import tipsy.svcmgr.web.dao.PartJobDao;
 import tipsy.svcmgr.web.dao.PartJobDto;
 import tipsy.svcmgr.web.dao.PartTimeWorkerDao;
 import tipsy.svcmgr.web.dao.PartTimeWorkerDto;
-import tipsy.svcmgr.web.dao.RawCategoryDto;
+import tipsy.svcmgr.web.dao.RawCategDto;
 import tipsy.svcmgr.web.vo.ContentInfoVo;
 import tipsy.svcmgr.web.vo.JoinedPartJobVo;
 import tipsy.svcmgr.web.vo.PartJobRewardVo;
@@ -182,11 +179,11 @@ public class DataMgmtServiceImpl implements DataMgmtService {
 		
 		BasicListResponse res = new BasicListResponse();
 		
-		List<RawCategoryDto> rawCategList = categoryDao.selectRawCateg();
+		List<RawCategDto> rawCategList = categoryDao.selectRawCateg();
 		
 		for(int i=0; i<rawCategList.size(); i++) {
 			
-			RawCategoryDto rawCateg = rawCategList.get(i);
+			RawCategDto rawCateg = rawCategList.get(i);
 			
 			CategoryDto dbCateg = categoryDao.selectByRawId(rawCateg.getId());
 			

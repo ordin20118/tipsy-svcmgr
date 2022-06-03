@@ -11,12 +11,11 @@ import org.springframework.web.bind.annotation.RequestMethod;
 
 import tipsy.common.configuration.LoggerName;
 
-
 @Controller
 public class UiController {
-
+   
 	private static final String URL_PREFIX = "page";
-	
+	 
 	Logger log = LoggerFactory.getLogger(LoggerName.SVC);
 	
 	@RequestMapping(value= URL_PREFIX + "/home", method={RequestMethod.GET})

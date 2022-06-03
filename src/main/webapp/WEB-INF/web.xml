@@ -18,7 +18,7 @@
   </servlet>
   <servlet>
     <servlet-name>initializeServlet</servlet-name>
-    <servlet-class>gwang.common.configuration.InitializeServlet</servlet-class>
+    <servlet-class>tipsy.common.configuration.InitializeServlet</servlet-class>
     <load-on-startup>1</load-on-startup>
   </servlet>
   
@@ -29,7 +29,7 @@
   
   <servlet-mapping>
     <servlet-name>appServlet</servlet-name>
-    <url-pattern>/manager/*</url-pattern>
+    <url-pattern>/svcmgr/*</url-pattern>
     <!-- <url-pattern>*.css</url-pattern>
     <url-pattern>*.js</url-pattern>
     <url-pattern>*.html</url-pattern>
