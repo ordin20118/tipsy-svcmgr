@@ -332,6 +332,9 @@ public class DataMgmtServiceImpl implements DataMgmtService {
 			
 			String orgFileName = subRoot + "/" + imageParam.getContentType() + "_" + imageParam.getContentId() + "_org" + extName;
 			String orgFilePath = dirPath + orgFileName;
+			
+			log.debug("orgFilePath : " + orgFilePath);
+			
 			orgFile = new File(orgFilePath);
 			writeFile(imageParam.getImageFile(), orgFilePath);
 			

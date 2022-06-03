@@ -12,7 +12,7 @@
 		<field name="test.Long"      type="long">1000</field>
 		<field name="test.Double"    type="double">1000.054</field>
 		-->
-		<field name="datapath.image"    type="string">C:\Users\GwangA\Desktop\dev\datastore\image</field>
+		<field name="datapath.image"    type="string">/Users/gwanga/datastore/image</field>
 		
 		
 	</extras>
