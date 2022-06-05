@@ -23,7 +23,7 @@ public class InitializeServlet extends HttpServlet {
 						
 			File log4jFile = new File(config.getServletContext().getRealPath("WEB-INF/classes/log4j.xml"));
 			log.info("LOG4J  FILE    :: [" + log4jFile.getAbsolutePath() + "]["+log4jFile.exists()+"]");
-			DOMConfigurator.configureAndWatch(log4jFile.getAbsolutePath(), 5000);
+			//DOMConfigurator.configureAndWatch(log4jFile.getAbsolutePath(), 5000);
 			
 			File configFile = new File(config.getServletContext().getRealPath("WEB-INF/config/config.xml"));
 			log.info("CONFIG FILE    :: [" + configFile.getAbsolutePath() + "]["+configFile.exists()+"]");
