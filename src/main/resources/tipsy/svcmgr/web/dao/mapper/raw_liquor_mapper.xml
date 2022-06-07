@@ -12,7 +12,7 @@
 		SELECT  * 
 		FROM    raw_liquor
 		WHERE	name_kr like #{nameKr}
-	</select>
+	</select> 
 
 	<select id="selectListByIds"  resultType="tipsy.svcmgr.web.dao.RawLiquorDto">		
 		SELECT 
