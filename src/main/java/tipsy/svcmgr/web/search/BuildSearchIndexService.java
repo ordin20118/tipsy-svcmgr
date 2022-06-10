@@ -25,12 +25,14 @@ import tipsy.common.basic.ObjectMapperInstance;
 import tipsy.common.configuration.LoggerName;
 import tipsy.es.ESManagerForBatch;
 import tipsy.es.ESManagerForLiquorSearch;
+import tipsy.es.EsEquipmentVo;
 import tipsy.es.EsIngredientVo;
 import tipsy.es.EsRawLiquorVo;
 import tipsy.svcmgr.helper.CategInstance;
 import tipsy.svcmgr.helper.CountryInstance;
 import tipsy.svcmgr.web.dao.CountryDao;
 import tipsy.svcmgr.web.dao.CountryDto;
+import tipsy.svcmgr.web.dao.EquipmentDto;
 import tipsy.svcmgr.web.dao.IngredientDto;
 import tipsy.svcmgr.web.dao.LiquorDao;
 import tipsy.svcmgr.web.dao.RawCategDao;
@@ -308,6 +310,120 @@ public class BuildSearchIndexService {
 			
 		} catch (Exception e) {
 			log.info("["+tid+"] buildIngredient " + e, e);
+		}
+	}
+	
+	
+
+	public synchronized void buildEquipment(int tid, List<Integer> equipIds) {
+	
+		
+		try {
+			SimpleDateFormat sdfYear = new SimpleDateFormat("yyyy");
+			ObjectMapper mapper = ObjectMapperInstance.getInstance().getMapper();
+			
+			byte[] ranBytes = new byte[8];
+			(new Random()).nextBytes(ranBytes);
+			String procCode = new String(Hex.encode(ranBytes));
+						
+			List<RawCategDto>   categList   = CategInstance.getInstance().getAllCateg(rawCategDao);			
+			Map<Integer, RawCategDto> categMap  = categList.stream().collect(Collectors.toMap(RawCategDto::getId, Function.identity()));
+			
+			List<Object> list = new ArrayList<Object>();
+			HashMap<String, Object> param = new HashMap<>();			
+			if(equipIds != null && equipIds.size() > 0) {
+				param.put("equipIds", equipIds);
+			}
+			
+			int[] rowCount = {0};
+			rawDataManualDao.runSelectStatement("tipsy.svcmgr.web.dao.EquipmentDao.selectListByIds", param, new ResultHandler() {
+				
+				@Override
+				public void handleResult(ResultContext context) {
+					rowCount[0]++;
+					
+					try {
+						
+						EquipmentDto equipment = (EquipmentDto)context.getResultObject();						
+						
+						if(true) {	// null data check
+							
+							EsEquipmentVo esEquipInfo = new EsEquipmentVo();
+							
+							esEquipInfo.setEquipId(equipment.getEquipId());
+							esEquipInfo.setNameKr(equipment.getNameKr());
+							esEquipInfo.setNameEn(equipment.getNameEn());
+							esEquipInfo.setUploadState(equipment.getUploadState());
+							esEquipInfo.setUpdateState(equipment.getUpdateState());
+							
+							if(equipment.getDescription() != null && equipment.getDescription().length() > 0) {
+								esEquipInfo.setDescription(equipment.getDescription());
+							}
+							
+							if(equipment.getRepImg() != null && equipment.getRepImg().length() > 0) {
+								esEquipInfo.setRepImg(equipment.getRepImg());
+							}							
+							
+							esEquipInfo.setCategory1Id(equipment.getCategory1Id());
+							esEquipInfo.setCategory2Id(equipment.getCategory2Id());							
+							esEquipInfo.setCategory1Name(equipment.getCategory1Name());
+							esEquipInfo.setCategory2Name(equipment.getCategory2Name());
+							
+							if(equipment.getCategory3Id() != null) {
+								esEquipInfo.setCategory3Id(equipment.getCategory3Id());
+								esEquipInfo.setCategory3Name(equipment.getCategory3Name());
+							} else if(equipment.getCategory4Id() != null) {
+								esEquipInfo.setCategory4Id(equipment.getCategory4Id());
+								esEquipInfo.setCategory4Name(equipment.getCategory4Name());
+							}				
+							
+							esEquipInfo.setEsUpdateDate(new Date());
+							
+							esEquipInfo.setProcCode(procCode);
+							esEquipInfo.setRegDate(equipment.getRegDate());	
+							
+							esEquipInfo.setRegAdmin(equipment.getRegAdmin());
+							esEquipInfo.setRegAdminName(equipment.getRegAdminName());
+							
+							if(equipment.getUpdateAdmin() != null) {
+								esEquipInfo.setUpdateAdmin(equipment.getUpdateAdmin());
+								esEquipInfo.setUpdateAdminName(equipment.getUpdateAdminName());
+							}
+								
+							list.add(esEquipInfo);
+						}
+						
+						
+						if(list.size() >= 200) {
+							ESManagerForBatch.getInstance().createOrUpdateBulk(ESManagerForLiquorSearch.INDEX_EQUIPMENT, list, null);	
+							list.clear();
+							log.debug("["+tid+"] update equipment info ["+rowCount[0]+"]");							
+						}
+						
+						
+					} catch (Exception e) {
+						log.error("["+tid+"] handleResult error " + e);
+					}
+				}
+			});
+			
+			if(list.size() > 0) {
+								
+				ESManagerForBatch.getInstance().createOrUpdateBulk(ESManagerForLiquorSearch.INDEX_EQUIPMENT, list, null);
+				list.clear();
+				log.info("["+tid+"] update equipment info ["+rowCount[0]+"]");
+			}
+			
+			log.info("["+tid+"] update equipment DONE ["+rowCount[0]+"]");			
+			
+			
+			if(equipIds == null || equipIds.size() == 0) {
+				//BulkByScrollResponse delRes = ESManagerForBatch.getInstance().deleteByProcCode(ESManagerForLiquorSearch.INDEX_RAW_LIQUOR_INFO, procCode);
+				//log.info("["+tid+"] delete Old procCode["+procCode+"] ["+delRes+"]");					
+			}
+			
+		} catch (Exception e) {
+			log.info("["+tid+"] buildEquipment " + e, e);
 		}
 	}
 	

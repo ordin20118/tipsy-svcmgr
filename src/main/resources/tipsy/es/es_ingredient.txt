@@ -123,9 +123,6 @@ curl -H 'Content-Type: application/json' -XPUT 'http://localhost:9200/ingredient
       "proc_code": {
         "type": "keyword"
       },
-      "price": {
-        "type": "double"
-      },
       "reg_date": {
         "type": "date",
         "format": "yyyy-MM-dd HH:mm:ssZ||yyyy-MM-dd||epoch_millis"

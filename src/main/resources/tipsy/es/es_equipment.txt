@@ -85,7 +85,7 @@ curl -H 'Content-Type: application/json' -XPUT 'http://localhost:9200/equipment'
   },
   "mappings": {
     "properties": {
-      "ingd_id": {
+      "equip_id": {
         "type": "integer"
       },
       "category1_id": {
@@ -122,9 +122,6 @@ curl -H 'Content-Type: application/json' -XPUT 'http://localhost:9200/equipment'
       },
       "proc_code": {
         "type": "keyword"
-      },
-      "price": {
-        "type": "double"
       },
       "reg_date": {
         "type": "date",
