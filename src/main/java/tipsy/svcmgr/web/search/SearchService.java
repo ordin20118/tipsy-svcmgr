@@ -12,6 +12,9 @@ import lombok.Data;
 import tipsy.common.configuration.LoggerName;
 import tipsy.svcmgr.web.controller.param.WebSearchParam;
 import tipsy.svcmgr.web.dao.CountryDao;
+import tipsy.svcmgr.web.dao.EquipmentDto;
+import tipsy.svcmgr.web.dao.IngredientDao;
+import tipsy.svcmgr.web.dao.IngredientDto;
 import tipsy.svcmgr.web.dao.RawCategDao;
 import tipsy.svcmgr.web.dao.RawLiquorDao;
 import tipsy.svcmgr.web.dao.RawLiquorDto;
@@ -25,6 +28,9 @@ public class SearchService {
 	private RawLiquorDao rawLiquorDao;
 	
 	@Autowired
+	private IngredientDao ingredientDao;
+	
+	@Autowired
 	private RawCategDao rawCategDao;
 	
 	@Autowired
@@ -34,8 +40,13 @@ public class SearchService {
 	public class SearchResultVo {
 		
 		public static final String LIQUOR           = "liquor";
+		public static final String INGREDIENT       = "ingredient";
+		public static final String EQUIPMENT        = "equipment";
+		public static final String COCKTAIL        	= "coctail";
 		
 		private List<RawLiquorDto>   liquorList;
+		private List<IngredientDto>  ingredeintList;
+		private List<EquipmentDto>   equipmentList;
 	
 		private List<String> explains = new ArrayList<>();		
 		public void addExplain(String explain) {
@@ -52,33 +63,61 @@ public class SearchService {
 		
 		// 검색어 필터
 		// 1. 특수문자 제거
-		sParam.setOrgKeyword(sParam.getKeyword());
-		sParam.setKeyword(SearchParam.keywordFiter(sParam.getKeyword()));		
+		if(sParam.getKeyword() != null) {
+			sParam.setOrgKeyword(sParam.getKeyword());
+			sParam.setKeyword(SearchParam.keywordFiter(sParam.getKeyword()));	
+		}	
 		
-		// 2. 공백 확인		
-		if(sParam.getKeyword() == null || sParam.getKeyword().length() == 0) {
-			res.setLiquorList(new ArrayList<>());
-			return res;
-		} else {
-			LiquorSearcher liquorSearcher = new LiquorSearcher(rawCategDao);
-			
-			SearchResult searchRes = liquorSearcher.searchRawLiquor(tid, sParam);
-			res.setSearchRes(searchRes);
-			
-			// 검색된 liquor id list를 가지고 DB 조회
-			List<RawLiquorDto> rawLiquorList = new ArrayList<>();
-			if(searchRes.getHitIds().size() > 0) {				
-				rawLiquorList = rawLiquorDao.selectListByIds(searchRes.getHitIds());		
-			}
-			
-			for(int i=0; i<rawLiquorList.size(); i++) {
-				System.out.println("["+rawLiquorList.get(i).getNameKr()+"/"+rawLiquorList.get(i).getNameEn()+"]");
-			}
-						
-			res.setLiquorList(rawLiquorList);			
-			return res;
-		}		
+		Searcher liquorSearcher = new Searcher(rawCategDao);
 		
+		SearchResult searchRes = liquorSearcher.searchRawLiquor(tid, sParam);
+		res.setSearchRes(searchRes);
+		
+		// 검색된 liquor id list를 가지고 DB 조회
+		List<RawLiquorDto> rawLiquorList = new ArrayList<>();
+		if(searchRes.getHitIds().size() > 0) {				
+			rawLiquorList = rawLiquorDao.selectListByIds(searchRes.getHitIds());		
+		}
+		
+		for(int i=0; i<rawLiquorList.size(); i++) {
+			log.debug("["+rawLiquorList.get(i).getNameKr()+"/"+rawLiquorList.get(i).getNameEn()+"]");
+		}
+					
+		res.setLiquorList(rawLiquorList);			
+		return res;
+	}
+	
+	public SearchResultVo searchIngredient(int tid, WebSearchParam sParam) throws Exception {
+		
+		SearchResultVo res = new SearchResultVo();
+		
+		// 검색어 필터
+		// 1. 특수문자 제거
+		if(sParam.getKeyword() != null) {
+			sParam.setOrgKeyword(sParam.getKeyword());
+			sParam.setKeyword(SearchParam.keywordFiter(sParam.getKeyword()));	
+		}				
+		
+		Searcher liquorSearcher = new Searcher(rawCategDao);
+		
+		SearchResult searchRes = liquorSearcher.searchIngredient(tid, sParam);
+		res.setSearchRes(searchRes);
+		
+		// 검색된 liquor id list를 가지고 DB 조회
+		List<IngredientDto> ingredientList = new ArrayList<>();
+		if(searchRes.getHitIds().size() > 0) {				
+			
+			log.debug("[HItsIds]:"+searchRes.getHitIds());
+							
+			ingredientList = ingredientDao.selectListByIds(searchRes.getHitIds());		
+		}
+		
+		for(int i=0; i<ingredientList.size(); i++) {
+			log.debug("["+ingredientList.get(i).getNameKr()+"/"+ingredientList.get(i).getNameEn()+"]");
+		}
+					
+		res.setIngredeintList(ingredientList);			
+		return res;
 	}
 	
 }

@@ -57,7 +57,17 @@ public class SearchApiController extends BasicController {
 			log.debug("[" + tid + "] .......... searchParam(" + searchParam + ") ..........");
 			
 			BasicListResponse res = new BasicListResponse();
-			SearchResultVo sRes = searchService.searchRawLiquor(tid, searchParam);
+			SearchResultVo sRes = null;
+			
+			if(searchParam.getTarget() == null) {
+				sRes = searchService.searchRawLiquor(tid, searchParam);
+			} else if(searchParam.getTarget().equals(WebSearchParam.SEARCH_TARGET_LIQUOR)) {
+				sRes = searchService.searchRawLiquor(tid, searchParam);
+			} else if(searchParam.getTarget().equals(WebSearchParam.SEARCH_TARGET_INGD)) {
+				sRes = searchService.searchIngredient(tid, searchParam);
+			} else if(searchParam.getTarget().equals(WebSearchParam.SEARCH_TARGET_EQUIP)) {
+				
+			}
 			
 			//log.debug("[" + tid + "] .......... res(" + sRes + ") ..........");
 			

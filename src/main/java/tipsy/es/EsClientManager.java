@@ -29,8 +29,6 @@ public class EsClientManager {
     	int 	port   = Configuration.getInstance().getIntegerExtra("es.port", 80);
     	String 	schema = Configuration.getInstance().getStringExtra("es.schema");
     	
-    	System.out.println("["+host+"]["+port+"]["+schema+"]");
-    	
     	if(gClient != null) {
     		
     		return gClient;

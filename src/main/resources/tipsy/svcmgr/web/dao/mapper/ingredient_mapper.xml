@@ -34,7 +34,7 @@
 		LEFT OUTER JOIN image ON image.content_id = ingredient.ingd_id AND image.content_type = 300 AND image.image_type = 0
 		<where>
 			<if test="ingdIds != null">
-				WHERE ingredient.ingd_id IN (
+				AND ingredient.ingd_id IN (
 					<foreach collection="ingdIds" item="item" index="index" open="" separator=","  close="">
 						#{item}
 					</foreach>
