@@ -1,0 +1,192 @@
+curl -H 'Content-Type: application/json' -XDELETE 'http://localhost:9200/integration'
+
+curl -H 'Content-Type: application/json' -XPUT 'http://localhost:9200/integration' -d '
+{
+  "settings": {   
+    "index": {
+      "analysis": {
+        "tokenizer": {
+          "basic_tk": {
+            "type": "ngram",
+            "min_gram": "2",
+            "max_gram": "3",
+            "token_chars": [
+            	"letter",
+            	"whitespace"
+            ]
+          },
+          "en_tk": {
+            "type": "ngram",
+            "min_gram": "3",
+            "max_gram": "4",
+            "token_chars": [
+            	"letter",
+            	"whitespace"
+            ]
+          }
+        },
+        "analyzer": {
+          "basic_ana": {
+            "type": "custom",
+            "tokenizer": "basic_tk",
+            "filter": [
+              "lowercase"
+            ],
+            "char_filter": []
+          },
+          "en_ana": {
+            "type": "custom",
+            "tokenizer": "en_tk",
+            "filter": [
+              "lowercase"
+            ],
+            "char_filter": []
+          }
+        },
+        "char_filter": {
+          "remove_sp_char": {
+            "type": "pattern_replace",
+            "pattern": "[\\-()\\[\\]{}\\+\\&\\*\\,\\.\\:\\_\\~\\+]",
+            "replacement": " "
+          },
+          "decimal_mark_filter": {
+            "type": "pattern_replace",
+            "pattern": "(\\d+),(?=\\d)",
+            "replacement": "$1"
+          },
+          "decimal_dot_filter": {
+            "type": "pattern_replace",
+            "pattern": "(\\d+)\\.(?=\\d)",
+            "replacement": "$1dot"
+          },
+          "decimal_inch_filter01": {
+            "type": "pattern_replace",
+            "pattern": "(\\d+)\\.(\\d+)인치",
+            "replacement": "$1\\.$2inch"
+          },
+          "decimal_inch_filter02": {
+            "type": "pattern_replace",
+            "pattern": "(\\d+)인치",
+            "replacement": "$1inch"
+          },
+          "decimal_liter_filter01": {
+            "type": "pattern_replace",
+            "pattern": "(\\d+)\\.(\\d+)리터",
+            "replacement": "$1\\.$2l"
+          },
+          "decimal_liter_filter02": {
+            "type": "pattern_replace",
+            "pattern": "(\\d+)리터",
+            "replacement": "$1l"
+          }
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "liquor_id": {
+        "type": "integer"
+      },
+      "ingd_id": {
+        "type": "integer"
+      },
+      "equip_id": {
+        "type": "integer"
+      },
+      "category1_id": {
+        "type": "keyword"
+      },
+      "category2_id": {
+        "type": "keyword"
+      },
+      "category3_id": {
+        "type": "keyword"
+      },
+      "category4_id": {
+        "type": "keyword"
+      },      
+      "category1_name": {
+        "type": "keyword"
+      },      
+      "category2_name": {
+        "type": "keyword"
+      },      
+      "category3_name": {
+        "type": "keyword"
+      },      
+      "category4_name": {
+        "type": "keyword"
+      },
+      "country_id": {
+        "type": "integer"
+      },
+      "country_name": {
+        "type": "text",
+        "analyzer": "basic_ana"
+      },
+      "region": {
+        "type": "text",
+        "analyzer": "basic_ana"
+      },     
+      "name_kr": {
+        "type": "text",
+        "analyzer": "basic_ana"
+      },
+      "name_en": {
+        "type": "text",
+        "analyzer": "en_ana"
+      },
+      "proc_code": {
+        "type": "keyword"
+      },
+      "abv": {
+        "type": "double"
+      },
+      "vintage": {
+        "type": "integer"
+      },
+      "price": {
+        "type": "double"
+      },
+      "site": {
+        "type": "integer"
+      },
+      "url": {
+        "type": "keyword"
+      },
+      "reg_date": {
+        "type": "date",
+        "format": "yyyy-MM-dd HH:mm:ssZ||yyyy-MM-dd||epoch_millis"
+      },
+      "update_date": {
+        "type": "date",
+        "format": "yyyy-MM-dd HH:mm:ssZ||yyyy-MM-dd||epoch_millis"
+      },
+      "es_update_date": {
+        "type": "date",
+        "format": "yyyy-MM-dd HH:mm:ssZ||yyyy-MM-dd||epoch_millis"
+      },
+      "update_state": {
+        "type": "integer"
+      },
+      "upload_state": {
+        "type": "integer"
+      },      
+      "reg_admin": {
+        "type": "integer"
+      },      
+      "reg_admin_name": {
+        "type": "text"
+      }, 
+      "update_admin": {
+        "type": "integer"
+      },      
+      "update_admin_name": {
+        "type": "text"
+      }
+    }
+  }
+}'
+
+
