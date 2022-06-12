@@ -67,6 +67,10 @@ public class SearchApiController extends BasicController {
 				sRes = searchService.searchIngredient(tid, searchParam);
 			} else if(searchParam.getTarget().equals(WebSearchParam.SEARCH_TARGET_EQUIP)) {
 				
+			} else if(searchParam.getTarget().equals(WebSearchParam.SEARCH_TARGET_ALL)) {
+				// 통합 검색
+				log.debug("[This is search all if phrase]");
+				sRes = searchService.searchAll(tid, searchParam);
 			}
 			
 			//log.debug("[" + tid + "] .......... res(" + sRes + ") ..........");

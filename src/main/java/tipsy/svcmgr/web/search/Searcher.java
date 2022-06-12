@@ -32,6 +32,7 @@ import tipsy.svcmgr.web.dao.RawCategDto;
 
 public class Searcher {
 	
+	public static final String INDEX_INTEGRATION = "integration";
 	public static final String INDEX_RAW_LIQUOR = "raw_liquor_info";
 	public static final String INDEX_INGREDIENT = "ingredient";
 	public static final String INDEX_EQUIPMENT 	= "equipment";
@@ -316,5 +317,136 @@ public class Searcher {
 		 }	
 	}
 	
+	
+	public SearchResult searchAll(int tid, WebSearchParam sParam) throws Exception {
+		
+		try {
+			
+			CategInstance categIns = CategInstance.getInstance();
+			List<RawCategDto> categData = categIns.getAllCateg(rawCategDao);
+	
+			SearchParam param = new SearchParam();
+			param.setOrgKeyword(sParam.getOrgKeyword());
+			param.setKeyword(sParam.getKeyword());
+			int from = (sParam.getPaging().getNowPage() -1) * sParam.getPaging().getPerPage();
+			param.setFrom(from);
+			param.setSize(sParam.getPaging().getPerPage());
+			param.setOrgParam(sParam);
+			
+			long startTime = System.currentTimeMillis();
+			
+			SearchResponse esRes = null;			
+			SearchResult res = new SearchResult();
+			
+			try {
+				
+				log.debug("["+tid+"] Search All Param:["+param+"]");
+				
+				Map<Integer, RawCategDto> categMap   = new HashMap<Integer, RawCategDto>();
+				
+				for(int i=0; i<categData.size(); i++) {
+					RawCategDto categ = categData.get(i);					
+					categMap.put(categ.getId(), categ);
+				}
+				
+				esRes = esSearchAllV1(tid, param, sParam, categData);
+				res.setParam(param);
+				
+				// 후처리
+				if(esRes != null) {
+				
+					SearchHit[] sHit = esRes.getHits().getHits();
+					if(sHit.length > 0) {
+						List<HitData> hitList = new ArrayList<>();
+						
+						for(int i=0; i<sHit.length; i++) {						
+							HitData data = new HitData();							
+							data.setDataStrId(sHit[i].getId());
+							data.setScore(sHit[i].getScore());
+							hitList.add(data);
+						}
+						
+						res.setHits(hitList);
+					}
+				}				
+				
+				long execTime = System.currentTimeMillis() - startTime;
+				log.debug("[Searcher][searchAll exec (" + execTime+")ms");
+								
+			} catch(Exception e) {
+				log.error("Search All Error:["+e.getMessage()+"]", e);
+			}
+
+			return res;
+			
+		} catch (Exception e) {
+    		Method nowmethod = new Object(){}.getClass().getEnclosingMethod();
+    		throw new Exception(nowmethod.getName()+ " error "+ e.getMessage(), e);
+    	}
+		
+	}
+	
+	public SearchResponse esSearchAllV1(int tid, SearchParam searchParam, WebSearchParam webSearchParam, List<RawCategDto> categList) throws Exception {
+		
+		RestHighLevelClient client = null;
+		
+		 try {
+			 
+			 client = EsClientManager.getInstance().getClient();
+			 SearchRequest esRequest = new SearchRequest(INDEX_INTEGRATION);
+			 SearchSourceBuilder sourceBuilder = new SearchSourceBuilder(); 
+    		
+			 BoolQueryBuilder mainBool = QueryBuilders.boolQuery();
+			 
+			 // make multi match query
+			 if(searchParam.getKeyword() != null) {
+				 MultiMatchQueryBuilder multiQuery = 
+							QueryBuilders.multiMatchQuery(searchParam.getKeyword()) 
+							.field("name_kr", 1.0f)
+							.field("name_en", 1.0f);
+					 			 
+				 // TODO: 테스트 결과에 따라서 변경 필요
+				 multiQuery.type(Type.MOST_FIELDS);
+				 
+				 mainBool.should(multiQuery);		 
+			 }
+				 
+			 
+			 // make filter query
+			 BoolQueryBuilder filterQuery = QueryBuilders.boolQuery();			 
+			 // categ filter
+			 if(webSearchParam.getCategId() != null) {
+				 if(webSearchParam.getCategLv() == 1) {
+					 mainBool.must(QueryBuilders.termQuery("category1_id", webSearchParam.getCategId()));
+				 } else if(webSearchParam.getCategLv() == 2) {
+					 mainBool.must(QueryBuilders.termQuery("category2_id", webSearchParam.getCategId()));
+				 } else if(webSearchParam.getCategLv() == 3) {
+					 mainBool.must(QueryBuilders.termQuery("category3_id", webSearchParam.getCategId()));
+				 } else if(webSearchParam.getCategLv() == 4) {
+					 mainBool.must(QueryBuilders.termQuery("category4_id", webSearchParam.getCategId()));
+				 }
+			 }			 
+			 mainBool.filter(filterQuery);
+			 
+			 sourceBuilder.sort(new FieldSortBuilder("_score").order(SortOrder.DESC));
+			 sourceBuilder.query(mainBool);	
+			 sourceBuilder.from(searchParam.getFrom()); 
+			 sourceBuilder.size(searchParam.getSize());
+			 sourceBuilder.minScore(0.01f);
+			 			 
+			 JSONObject esQuery = new JSONObject(sourceBuilder.toString());
+			 log.debug("["+tid+"] ES SOURCE[\n"+ esQuery.toString(4) +"\n]");
+
+			 esRequest.source(sourceBuilder);
+			 SearchResponse res = client.search(esRequest, RequestOptions.DEFAULT);
+			 return res;
+			 
+		 } catch(Exception e) {			 
+			 Method nowmethod = new Object(){}.getClass().getEnclosingMethod();
+			 throw new Exception(nowmethod.getName()+ " error "+ e.getMessage(), e); 
+		 } finally {
+			 EsClientManager.getInstance().returnClient(client);
+		 }	
+	}
 
 }

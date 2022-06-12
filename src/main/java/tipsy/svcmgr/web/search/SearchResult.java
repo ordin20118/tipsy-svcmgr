@@ -23,8 +23,19 @@ public class SearchResult {
 		
 		if(hits != null && hits.size() > 0) {
 			for(int i=0; i<hits.size(); i++) {
-				System.out.println("["+hits.get(i).getDataId()+"]-["+hits.get(i).getScore()+"]");
 				list.add(hits.get(i).getDataId());
+			}	
+		}
+		
+		return list;
+	}
+	
+	public List<String> getStrHitIds() {
+		ArrayList<String> list = new ArrayList<>();
+		
+		if(hits != null && hits.size() > 0) {
+			for(int i=0; i<hits.size(); i++) {
+				list.add(hits.get(i).getDataStrId());
 			}	
 		}
 		
@@ -56,6 +67,7 @@ public class SearchResult {
 
 @Data
 class HitData {
-	public Integer dataId;
-	public Float score;
+	public Integer 	dataId;
+	public String	dataStrId;
+	public Float 	score;
 }

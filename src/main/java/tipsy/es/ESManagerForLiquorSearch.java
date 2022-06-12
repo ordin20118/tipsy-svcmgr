@@ -37,6 +37,7 @@ public class ESManagerForLiquorSearch {
     
     private Logger log = LoggerFactory.getLogger(LoggerName.SVC);
     
+    public static final String INDEX_INTEGRATION  		= "integration";
     public static final String INDEX_RAW_LIQUOR_INFO  	= "raw_liquor_info";
     public static final String INDEX_LIQUOR_INFO      	= "svc_liquor_info";
     public static final String INDEX_INGREDIENT  		= "ingredient";

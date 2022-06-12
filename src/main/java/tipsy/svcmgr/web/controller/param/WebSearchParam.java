@@ -6,6 +6,7 @@ import tipsy.common.basic.AbstractSearchParam;
 @Data
 public class WebSearchParam extends AbstractSearchParam {
 	
+	public static final String SEARCH_TARGET_ALL 	= "all";
 	public static final String SEARCH_TARGET_LIQUOR = "liquor";
 	public static final String SEARCH_TARGET_INGD 	= "ingredient";
 	public static final String SEARCH_TARGET_EQUIP 	= "equipment";

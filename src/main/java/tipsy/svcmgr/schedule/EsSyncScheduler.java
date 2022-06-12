@@ -45,6 +45,10 @@ public class EsSyncScheduler {
 			buildSearchIndexService.buildRawLiquorInfo(tid, null);
 			buildSearchIndexService.buildIngredient(tid, null);
 			buildSearchIndexService.buildEquipment(tid, null);
+			
+			buildSearchIndexService.buildRawLiquorInfoForIntegration(tid, null);
+			buildSearchIndexService.buildIngredientForIntegration(tid, null);
+			buildSearchIndexService.buildEquipmentForIntegration(tid, null);
 						
 		} catch (Exception e) {
 			Method nowmethod = new Object(){}.getClass().getEnclosingMethod();
