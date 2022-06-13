@@ -417,13 +417,13 @@ public class Searcher {
 			 // categ filter
 			 if(webSearchParam.getCategId() != null) {
 				 if(webSearchParam.getCategLv() == 1) {
-					 mainBool.must(QueryBuilders.termQuery("category1_id", webSearchParam.getCategId()));
+					 filterQuery.must(QueryBuilders.termQuery("category1_id", webSearchParam.getCategId()));
 				 } else if(webSearchParam.getCategLv() == 2) {
-					 mainBool.must(QueryBuilders.termQuery("category2_id", webSearchParam.getCategId()));
+					 filterQuery.must(QueryBuilders.termQuery("category2_id", webSearchParam.getCategId()));
 				 } else if(webSearchParam.getCategLv() == 3) {
-					 mainBool.must(QueryBuilders.termQuery("category3_id", webSearchParam.getCategId()));
+					 filterQuery.must(QueryBuilders.termQuery("category3_id", webSearchParam.getCategId()));
 				 } else if(webSearchParam.getCategLv() == 4) {
-					 mainBool.must(QueryBuilders.termQuery("category4_id", webSearchParam.getCategId()));
+					 filterQuery.must(QueryBuilders.termQuery("category4_id", webSearchParam.getCategId()));
 				 }
 			 }			 
 			 mainBool.filter(filterQuery);
