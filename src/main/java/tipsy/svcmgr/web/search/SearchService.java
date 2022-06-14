@@ -49,7 +49,7 @@ public class SearchService {
 		public static final String COCKTAIL        	= "coctail";
 		
 		private List<RawLiquorDto>   liquorList;
-		private List<IngredientDto>  ingredeintList;
+		private List<IngredientDto>  ingredientList;
 		private List<EquipmentDto>   equipmentList;
 	
 		private List<String> explains = new ArrayList<>();		
@@ -120,7 +120,7 @@ public class SearchService {
 			log.debug("["+ingredientList.get(i).getNameKr()+"/"+ingredientList.get(i).getNameEn()+"]");
 		}
 					
-		res.setIngredeintList(ingredientList);			
+		res.setIngredientList(ingredientList);			
 		return res;
 	}
 	
@@ -171,7 +171,7 @@ public class SearchService {
 			} else if(ingdIds.size() > 0) {
 				List<IngredientDto> ingredientList = new ArrayList<>();
 				ingredientList = ingredientDao.selectListByIds(ingdIds);
-				res.setIngredeintList(ingredientList);
+				res.setIngredientList(ingredientList);
 			} else if(equipIds.size() > 0) {
 				List<EquipmentDto> equipList = new ArrayList<>();
 				equipList = equipmentDao.selectListByIds(equipIds);

@@ -34,10 +34,10 @@ public class RawLiquorDto extends AbstractSearchParam {
 	private Integer countryId;
 	private String	region;
 	private Integer regionId;
-	private String	category1Id;
-	private String	category2Id;
-	private String	category3Id;
-	private String	category4Id;
+	private Integer	category1Id;
+	private Integer	category2Id;
+	private Integer	category3Id;
+	private Integer	category4Id;
 	private Float	price;
 	private String 	description;
 	private String	history;

@@ -21,10 +21,10 @@ public class EsEquipmentVo {
 	private String	nameEn;
 	private Integer uploadState;
 	private Integer updateState;
-	private String	category1Id;
-	private String	category2Id;
-	private String	category3Id;
-	private String	category4Id;
+	private Integer	category1Id;
+	private Integer	category2Id;
+	private Integer	category3Id;
+	private Integer	category4Id;
 	private String 	description;
 	
 	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ssZ",  timezone="Asia/Seoul")

@@ -95,16 +95,16 @@ curl -H 'Content-Type: application/json' -XPUT 'http://localhost:9200/integratio
         "type": "integer"
       },
       "category1_id": {
-        "type": "keyword"
+        "type": "integer"
       },
       "category2_id": {
-        "type": "keyword"
+        "type": "integer"
       },
       "category3_id": {
-        "type": "keyword"
+        "type": "integer"
       },
       "category4_id": {
-        "type": "keyword"
+        "type": "integer"
       },      
       "category1_name": {
         "type": "keyword"

@@ -12,6 +12,8 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.MatchAllQueryBuilder;
+import org.elasticsearch.index.query.MatchQueryBuilder;
 import org.elasticsearch.index.query.MultiMatchQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
@@ -409,6 +411,9 @@ public class Searcher {
 				 multiQuery.type(Type.MOST_FIELDS);
 				 
 				 mainBool.should(multiQuery);		 
+			 } else {
+				 MatchAllQueryBuilder matchAll = QueryBuilders.matchAllQuery();				 
+				 mainBool.should(matchAll);				
 			 }
 				 
 			 

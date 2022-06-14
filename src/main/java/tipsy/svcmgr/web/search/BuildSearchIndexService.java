@@ -505,7 +505,9 @@ public class BuildSearchIndexService {
 							if(liquorInfo.getCategory3Id() != null) {
 								esLiquorInfo.setCategory3Id(liquorInfo.getCategory3Id());
 								esLiquorInfo.setCategory3Name(liquorInfo.getCategory3Name());
-							} else if(liquorInfo.getCategory4Id() != null) {
+							}
+							
+							if(liquorInfo.getCategory4Id() != null) {
 								esLiquorInfo.setCategory4Id(liquorInfo.getCategory4Id());
 								esLiquorInfo.setCategory4Name(liquorInfo.getCategory4Name());
 							}

@@ -26,7 +26,7 @@ public class EsSyncScheduler {
 	
 	//매일 18시 05분에 실행>> UTC18시 - 한국시간 새벽3시.
 	@Scheduled(cron="0 05 18 * * *")
-	//@Scheduled(fixedDelay=5000)
+	//@Scheduled(fixedDelay=10000)
 	public void syncEsWithRDB () {
 		
 		int tid = (new Random()).nextInt(10000);
