@@ -29,6 +29,7 @@ import tipsy.svcmgr.web.search.SearchService.SearchResultVo;
 public class SearchApiController extends BasicController {
 
 	private static final String URL_PREFIX = "api";
+	private static final String URL_SUFFIX = ".tipsy";
 	
 	Logger log = LoggerFactory.getLogger(LoggerName.SVC);
 	
@@ -36,7 +37,7 @@ public class SearchApiController extends BasicController {
 	SearchService searchService;
 	
 	@RequestMapping(
-			value= URL_PREFIX+"/search",
+			value= URL_PREFIX+"/search"+URL_SUFFIX,
 			method={RequestMethod.GET}, 
 			produces="application/json;charset=utf-8")
 	public @ResponseBody ResponseEntity<String> search(

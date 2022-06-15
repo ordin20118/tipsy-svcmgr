@@ -37,6 +37,7 @@ import tipsy.svcmgr.web.service.DataMgmtService;
 public class DataCollectApiController extends BasicController {
 
 	private static final String URL_PREFIX = "api";
+	private static final String URL_SUFFIX = ".tipsy";
 	
 	Logger log = LoggerFactory.getLogger(LoggerName.SVC);
 	
@@ -48,7 +49,7 @@ public class DataCollectApiController extends BasicController {
 	
 	
 	@RequestMapping(
-			value= URL_PREFIX+"/country_list",
+			value= URL_PREFIX+"/country_list"+URL_SUFFIX,
 			method={RequestMethod.GET}, 
 			produces="application/json;charset=utf-8")
 	public @ResponseBody ResponseEntity<String> getCountryList(
@@ -85,7 +86,7 @@ public class DataCollectApiController extends BasicController {
 
 	
 	@RequestMapping(
-			value= URL_PREFIX+"/my_job_list",
+			value= URL_PREFIX+"/my_job_list"+URL_SUFFIX,
 			method={RequestMethod.GET}, 
 			produces="application/json;charset=utf-8")
 	public @ResponseBody ResponseEntity<String> getMyJobList(
@@ -125,7 +126,7 @@ public class DataCollectApiController extends BasicController {
 	
 
 	@RequestMapping(
-			value= URL_PREFIX+"/jobL",
+			value= URL_PREFIX+"/jobL"+URL_SUFFIX,
 			method={RequestMethod.GET}, 
 			produces="application/json;charset=utf-8")
 	public @ResponseBody ResponseEntity<String> getJobList(
@@ -166,7 +167,7 @@ public class DataCollectApiController extends BasicController {
 
 
 	@RequestMapping(
-			value= URL_PREFIX+"/category_child",
+			value= URL_PREFIX+"/category_child"+URL_SUFFIX,
 			method={RequestMethod.GET}, 
 			produces="application/json;charset=utf-8")
 	public @ResponseBody ResponseEntity<String> getCategoryChild(
@@ -203,7 +204,7 @@ public class DataCollectApiController extends BasicController {
 	
 
 	@RequestMapping(
-			value= URL_PREFIX+"/search_beer",
+			value= URL_PREFIX+"/search_beer"+URL_SUFFIX,
 			method={RequestMethod.GET}, 
 			produces="application/json;charset=utf-8")
 	public @ResponseBody ResponseEntity<String> searchBeerName(
@@ -241,7 +242,7 @@ public class DataCollectApiController extends BasicController {
 	
 
 	@RequestMapping(
-			value= URL_PREFIX+"/update_category",
+			value= URL_PREFIX+"/update_category"+URL_SUFFIX,
 			method={RequestMethod.GET}, 
 			produces="application/json;charset=utf-8")
 	public @ResponseBody ResponseEntity<String> updateCategory(
@@ -277,7 +278,7 @@ public class DataCollectApiController extends BasicController {
 	
 
 	@RequestMapping(
-			value= URL_PREFIX+"/insert_beer",
+			value= URL_PREFIX+"/insert_beer"+URL_SUFFIX,
 			method={RequestMethod.POST}, 
 			produces="application/json;charset=utf-8")
 	public @ResponseBody ResponseEntity<String> insertBeer(
@@ -319,7 +320,7 @@ public class DataCollectApiController extends BasicController {
 	}
 	
 	@RequestMapping(
-			value= URL_PREFIX+"/insert_spirits",
+			value= URL_PREFIX+"/insert_spirits"+URL_SUFFIX,
 			method={RequestMethod.POST}, 
 			produces="application/json;charset=utf-8")
 	public @ResponseBody ResponseEntity<String> insertSpirits(
@@ -361,7 +362,7 @@ public class DataCollectApiController extends BasicController {
  
 
 	@RequestMapping(
-			value= URL_PREFIX+"/checkin_part_worker",
+			value= URL_PREFIX+"/checkin_part_worker"+URL_SUFFIX,
 			method={RequestMethod.POST}, 
 			produces="application/json;charset=utf-8")
 	public @ResponseBody ResponseEntity<String> checkinPartWorker(

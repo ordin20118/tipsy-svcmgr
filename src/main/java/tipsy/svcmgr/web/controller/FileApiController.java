@@ -42,6 +42,7 @@ import tipsy.svcmgr.web.service.DataMgmtService;
 public class FileApiController extends BasicController {
 
 	private static final String URL_PREFIX = "api";
+	private static final String URL_SUFFIX = ".tipsy";
 	
 	Logger log = LoggerFactory.getLogger(LoggerName.SVC);
 	
@@ -53,7 +54,7 @@ public class FileApiController extends BasicController {
 	
 	
 	@RequestMapping(
-			value= URL_PREFIX+"/image/{dir}/{image}",
+			value= URL_PREFIX+"/image/{dir}/{image}"+URL_SUFFIX,
 			method={RequestMethod.GET}, 
 			produces="application/json;charset=utf-8")
 	public @ResponseBody ResponseEntity<byte[]> getImage(
@@ -114,7 +115,7 @@ public class FileApiController extends BasicController {
 	
 
 	@RequestMapping(
-			value= URL_PREFIX + "/upload_image", 
+			value= URL_PREFIX + "/upload_image"+URL_SUFFIX, 
 			method={RequestMethod.POST},
 			produces="application/json;charset=utf-8")
 	public @ResponseBody ResponseEntity<String> uploadImage(
