@@ -70,7 +70,7 @@ public class Searcher {
 			
 			try {
 				
-				log.debug("["+tid+"] Search Prod Param:["+param+"]");
+				log.debug("["+tid+"] Search Liquor Param:["+param+"]");
 				
 				Map<Integer, RawCategDto> categMap   = new HashMap<Integer, RawCategDto>();
 				
@@ -412,7 +412,8 @@ public class Searcher {
 				 
 				 mainBool.should(multiQuery);		 
 			 } else {
-				 MatchAllQueryBuilder matchAll = QueryBuilders.matchAllQuery();				 
+				 MatchAllQueryBuilder matchAll = QueryBuilders.matchAllQuery();
+				 matchAll.boost(Float.valueOf("1.2"));
 				 mainBool.should(matchAll);				
 			 }
 				 
