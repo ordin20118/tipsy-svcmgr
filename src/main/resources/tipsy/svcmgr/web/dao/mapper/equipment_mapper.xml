@@ -31,7 +31,7 @@
 		LEFT OUTER JOIN raw_category categ4 ON categ4.id = equipment.category4_id
 		LEFT OUTER JOIN auth_user reg_user ON reg_user.id = equipment.reg_admin
 		LEFT OUTER JOIN auth_user update_user ON update_user.id = equipment.update_admin
-		LEFT OUTER JOIN image ON image.content_id = equipment.equip_id AND image.content_type = 300 AND image.image_type = 0
+		LEFT OUTER JOIN image ON image.content_id = equipment.equip_id AND image.content_type = 400 AND image.image_type = 0
 		<where>
 			<if test="equipIds != null">
 				AND equipment.equip_id IN (
