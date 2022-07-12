@@ -151,7 +151,7 @@ public class FileApiController extends BasicController {
 			} else {
 				imgPath += "300."+exp;
 			}
-			
+			 
 			File file = new File(imgPath);
 	        
 			switch(exp) {
