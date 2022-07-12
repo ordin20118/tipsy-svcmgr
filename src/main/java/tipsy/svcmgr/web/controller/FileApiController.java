@@ -163,7 +163,7 @@ public class FileApiController extends BasicController {
 					break;
 			}  
 			
-			return new ResponseEntity<byte[]>(IOUtils.toByteArray(new FileInputStream(file)), header, HttpStatus.CREATED);
+			return new ResponseEntity<byte[]>(IOUtils.toByteArray(new FileInputStream(file)), header, HttpStatus.OK);
 					
 		} catch (Exception e) {
 			resStatus = HttpStatus.INTERNAL_SERVER_ERROR;
