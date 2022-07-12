@@ -31,6 +31,7 @@ import tipsy.common.basic.BasicListResponse;
 import tipsy.common.basic.ObjectMapperInstance;
 import tipsy.common.configuration.LoggerName;
 import tipsy.svcmgr.web.dao.BeerDto;
+import tipsy.svcmgr.web.dao.ImageDao;
 import tipsy.svcmgr.web.dao.ImageDto;
 import tipsy.svcmgr.web.dao.PartJobDto;
 import tipsy.svcmgr.web.dao.PartTimeWorkerDto;
@@ -52,17 +53,79 @@ public class FileApiController extends BasicController {
 	@Autowired
 	DataMgmtService dataMgmtService;	
 	
+	@Autowired
+	ImageDao imageDao;
+	
+	
+//	@RequestMapping(
+//			value= URL_PREFIX+"/image/{dir}/{image}"+URL_SUFFIX,
+//			method={RequestMethod.GET}, 
+//			produces="application/json;charset=utf-8")
+//	public @ResponseBody ResponseEntity<byte[]> getImage(
+//			Model model,
+//			HttpServletRequest request,
+//			HttpServletResponse response,
+//			@PathVariable("dir")String dir,
+//			@PathVariable("image")String image
+//			){
+//		
+//		long startTime = System.currentTimeMillis();
+//		int tid = genTid();
+//		String resString = "{}";
+//		HttpStatus resStatus = HttpStatus.OK;
+//		HttpHeaders header = new HttpHeaders();
+//		ObjectMapper mapper = ObjectMapperInstance.getInstance().getMapper();
+//		
+//		try {
+//			log.debug("[" + tid + "].......... Start (" + genReqInfo(request) + ")  ..........");
+//			log.debug("[" + tid + "][Get Image]");
+//			
+//			String rootPath = config.getStringExtra("datapath.image");
+//			String exp = "";
+//			int dotPosition = image.lastIndexOf('.');
+//		    
+//			if (-1 != dotPosition && image.length() - 1 > dotPosition) {
+//				exp = image.substring(dotPosition + 1);
+//			} else {
+//				exp = "png";
+//		    }
+//			
+//			File file = new File(rootPath + "/" + dir + "/" + image);
+//	        
+//			switch(exp) {
+//				case "jpeg":
+//					header.setContentType(MediaType.IMAGE_JPEG);		
+//					break;
+//				case "png":
+//					header.setContentType(MediaType.IMAGE_PNG);
+//					break;
+//			}  
+//			
+//			return new ResponseEntity<byte[]>(IOUtils.toByteArray(new FileInputStream(file)), header, HttpStatus.CREATED);
+//					
+//		} catch (Exception e) {
+//			resStatus = HttpStatus.INTERNAL_SERVER_ERROR;
+//			response.setHeader(XSTATUS_CODE, "500");
+//			response.setHeader(XSTATUS_REASON, e.getMessage());
+//			resString = getSimpleErrRes(e);
+//			log.error("["+tid+"] status["+resStatus+"] ["+e+"]", e);	
+//		} finally {
+//			log.debug("["+tid+"]..........execTime("+(System.currentTimeMillis() - startTime)+")ms..........");
+//		}
+//		
+//		return null;
+//	}
 	
 	@RequestMapping(
-			value= URL_PREFIX+"/image/{dir}/{image}"+URL_SUFFIX,
+			value= URL_PREFIX+"/image/{imageId}"+URL_SUFFIX,
 			method={RequestMethod.GET}, 
 			produces="application/json;charset=utf-8")
 	public @ResponseBody ResponseEntity<byte[]> getImage(
 			Model model,
 			HttpServletRequest request,
 			HttpServletResponse response,
-			@PathVariable("dir")String dir,
-			@PathVariable("image")String image
+			@PathVariable("imageId")String imageId,
+			@RequestParam(value="size", required=false)Integer size
 			){
 		
 		long startTime = System.currentTimeMillis();
@@ -76,17 +139,20 @@ public class FileApiController extends BasicController {
 			log.debug("[" + tid + "].......... Start (" + genReqInfo(request) + ")  ..........");
 			log.debug("[" + tid + "][Get Image]");
 			
-			String rootPath = config.getStringExtra("datapath.image");
-			String exp = "";
-			int dotPosition = image.lastIndexOf('.');
-		    
-			if (-1 != dotPosition && image.length() - 1 > dotPosition) {
-				exp = image.substring(dotPosition + 1);
-			} else {
-				exp = "png";
-		    }
+			// db select
+			ImageDto image = imageDao.selectOne(Integer.parseInt(imageId));
 			
-			File file = new File(rootPath + "/" + dir + "/" + image);
+			String rootPath = config.getStringExtra("datapath.image");
+			String exp = "png";
+			
+			String imgPath = rootPath + "/" + image.getPath() + "_";
+			if(size != null) {
+				imgPath += size + "." +exp;
+			} else {
+				imgPath += "300."+exp;
+			}
+			
+			File file = new File(imgPath);
 	        
 			switch(exp) {
 				case "jpeg":

@@ -28,7 +28,7 @@
 	<select id="selectOne"  resultType="tipsy.svcmgr.web.dao.ImageDto">
 		SELECT  * 
 		FROM    image
-		WHERE	image_id = #{image_id}
+		WHERE	image_id = #{imageId}
 	</select>
 	
 	<select id="selectList"  resultType="tipsy.svcmgr.web.dao.ImageDto">
