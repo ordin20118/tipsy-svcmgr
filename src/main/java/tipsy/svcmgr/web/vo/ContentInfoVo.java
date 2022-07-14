@@ -6,16 +6,8 @@ public class ContentInfoVo {
 	public static final int CONTENT_TYPE_COCKTAIL			= 200;	// 칵테일
 	public static final int CONTENT_TYPE_MATERIAL 			= 300;	// 술 재료 (라임, 소금, 시나몬 등...)
 	public static final int CONTENT_TYPE_TOOL				= 400;	// 술 도구
+	public static final int CONTENT_TYPE_INT_REVIEW 		= 400;	// 장비
+	public static final int CONTENT_TYPE_EXT_REVIEW			= 500;	// 용어
 	public static final int CONTENT_TYPE_PAIRING 			= 300;	// 페어링 음식
-	public static final int CONTENT_TYPE_INT_REVIEW 		= 400;	// 내부 평가 - 코드는 좀 더 고려 필요
-	public static final int CONTENT_TYPE_EXT_REVIEW			= 500;	// 외부 리뷰
-	
-	
-	public static final int LIQUOR_TYPE_BEER 				= 0;	// 맥주
-	public static final int LIQUOR_TYPE_SAKE 				= 1;	// 사케
-	public static final int LIQUOR_TYPE_KOR_TRADITIONAL 	= 2;	// 전통주
-	public static final int LIQUOR_TYPE_WINE 				= 4;	// 와인
-	public static final int LIQUOR_TYPE_VODKA				= 5;	// 보드카
-	public static final int LIQUOR_TYPE_COCTAIL				= 6;	// 칵테일
 	
 }
