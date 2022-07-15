@@ -42,6 +42,12 @@
 		WHERE	liquor_id = #{liquorId}
 	</select>
 	
+	<select id="selLiquorView"  resultType="tipsy.svcmgr.web.vo.LiquorContentInfoVo">
+		SELECT  * 
+		FROM    liquor
+		WHERE	liquor_id = #{liquorId}
+	</select>
+	
 	<select id="selectByName"  resultType="tipsy.svcmgr.web.dao.LiquorDto">
 		SELECT  * 
 		FROM    liquor

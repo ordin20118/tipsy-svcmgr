@@ -1,46 +1,73 @@
 package tipsy.svcmgr.web.service;
 
+import java.util.HashMap;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import tipsy.common.basic.BasicListResponse;
+import tipsy.common.basic.ObjectMapperInstance;
 import tipsy.common.configuration.LoggerName;
+import tipsy.svcmgr.web.dao.LiquorDao;
 import tipsy.svcmgr.web.dao.PartTimeWorkerDao;
 import tipsy.svcmgr.web.dao.PartTimeWorkerDto;
+import tipsy.svcmgr.web.vo.LiquorContentInfoVo;
+import tipsy.svcmgr.web.vo.LiquorListItemVo;
 
 @Service
-public class LiquorServiceImpl implements MemberMgmtService {
+public class LiquorServiceImpl implements LiquorService {
 
 	private Logger log = LoggerFactory.getLogger(LoggerName.SVC);
 	
 	@Autowired
-	private PartTimeWorkerDao partTimeWorkerDao;
+	private LiquorDao liquorDao;
 
 	@Override
-	public BasicListResponse joinPartTimeWorker(int tid, PartTimeWorkerDto worker) {
+	public LiquorContentInfoVo genLiquorInfo(int tid, int liquorId) throws Exception {
 		
-		BasicListResponse res = new BasicListResponse();
+		ObjectMapper mapper = ObjectMapperInstance.getInstance().getMapper();
+		
+		LiquorContentInfoVo res = null;
+		HashMap<String,Object> resMap = new HashMap<String,Object>();
 		
 		try {
 			
+			// select liquor
+			res = liquorDao.selLiquorView(liquorId);
 			
-			worker.setBankAccount(worker.getBankAccount().replace("-", ""));
+			// select imges except repImg
 			
-			// 중복 체크
-			PartTimeWorkerDto dupWorker = partTimeWorkerDao.selectByNameAccount(worker);
+			// select rating
 			
-			if(dupWorker == null) {
-				partTimeWorkerDao.insert(worker);
-				res.setState(BasicListResponse.STATE_SUCCESS);	
-			} else {
-				res.setState(BasicListResponse.STATE_DUPLICATION);
-			}
 			
 		} catch(Exception e) {
-			log.error("[getCountryList]Error:"+e.getMessage(), e);
-			res.setState(BasicListResponse.STATE_ERROR);	
+			log.error("[getLiquorInfo]Error:"+e.getMessage(), e);
+			throw e;
+		}
+		
+		return res;
+	}
+
+	@Override
+	public List<LiquorListItemVo> genLiquorListItem(int tid, List<Integer> liquorIds) throws Exception {
+		
+		ObjectMapper mapper = ObjectMapperInstance.getInstance().getMapper();
+
+		List<LiquorListItemVo> res = null;
+		
+		try {
+			
+			// select list
+			
+			
+		} catch(Exception e) {
+			log.error("[getLiquorListItem]Error:"+e.getMessage(), e);
+			throw e;
 		}
 		
 		return res;

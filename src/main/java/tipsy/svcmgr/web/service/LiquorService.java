@@ -1,11 +1,14 @@
 package tipsy.svcmgr.web.service;
 
-import tipsy.common.basic.BasicListResponse;
-import tipsy.svcmgr.web.dao.CountryDto;
+import java.util.List;
 import tipsy.svcmgr.web.dao.PartTimeWorkerDto;
+import tipsy.svcmgr.web.vo.LiquorContentInfoVo;
+import tipsy.svcmgr.web.vo.LiquorListItemVo;
 
 public interface LiquorService {
 
-	public BasicListResponse getLiquorInfo(int tid, PartTimeWorkerDto worker);
+	public LiquorContentInfoVo genLiquorInfo(int tid, int liquorId) throws Exception;
+	
+	public List<LiquorListItemVo> genLiquorListItem(int tid, List<Integer> liquorIds) throws Exception;
 	
 }
