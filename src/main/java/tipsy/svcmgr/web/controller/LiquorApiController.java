@@ -28,7 +28,9 @@ import tipsy.common.configuration.LoggerName;
 import tipsy.svcmgr.web.dao.BeerDto;
 import tipsy.svcmgr.web.dao.PartTimeWorkerDto;
 import tipsy.svcmgr.web.service.CountryService;
+import tipsy.svcmgr.web.service.LiquorService;
 import tipsy.svcmgr.web.service.MemberMgmtService;
+import tipsy.svcmgr.web.vo.LiquorContentInfoVo;
 
 
 @Controller
@@ -38,6 +40,9 @@ public class LiquorApiController extends BasicController {
 	private static final String URL_SUFFIX = ".tipsy";
 	
 	Logger log = LoggerFactory.getLogger(LoggerName.SVC);
+	
+	@Autowired
+	LiquorService liquorService;
 	
 		
 	@RequestMapping(
@@ -60,8 +65,11 @@ public class LiquorApiController extends BasicController {
 			log.debug("[" + tid + "].......... Start (" + genReqInfo(request) + ")  ..........");
 			log.debug("[" + tid + "][Liquor_ID]:"+liquorId);
 			
-			//BasicListResponse res = txService.getTxList(tid, txListInfo);
-			//resString = mapper.writeValueAsString(res);
+			LiquorContentInfoVo liquor = liquorService.genLiquorInfo(tid, liquorId);
+			BasicListResponse res = new BasicListResponse();
+			res.setData(liquor);
+			res.setStateMessage(BasicListResponse.STATE_SUCCESS_MESSAGE);
+			resString = mapper.writeValueAsString(res);
 			
 		} catch (Exception e) {
 			resStatus = HttpStatus.INTERNAL_SERVER_ERROR;

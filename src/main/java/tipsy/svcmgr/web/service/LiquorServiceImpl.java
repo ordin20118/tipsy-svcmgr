@@ -32,13 +32,14 @@ public class LiquorServiceImpl implements LiquorService {
 		
 		ObjectMapper mapper = ObjectMapperInstance.getInstance().getMapper();
 		
-		LiquorContentInfoVo res = null;
+		LiquorContentInfoVo res = new LiquorContentInfoVo();
 		HashMap<String,Object> resMap = new HashMap<String,Object>();
 		
 		try {
 			
 			// select liquor
-			res = liquorDao.selLiquorView(liquorId);
+			LiquorListItemVo item = liquorDao.selLiquorView(liquorId);
+			res.setItem(item);
 			
 			// select imges except repImg
 			
