@@ -35,7 +35,7 @@ public class LiquorServiceImpl implements LiquorService {
 		LiquorContentInfoVo res = new LiquorContentInfoVo();
 		HashMap<String,Object> resMap = new HashMap<String,Object>();
 		
-		try {
+		try { 
 			
 			// select liquor
 			LiquorListItemVo item = liquorDao.selLiquorView(liquorId);
