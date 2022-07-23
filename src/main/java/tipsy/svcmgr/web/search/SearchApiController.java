@@ -55,7 +55,7 @@ public class SearchApiController extends BasicController {
 		try {
 			
 			log.debug("[" + tid + "] .......... Start (" + genReqInfo(request) + ") ..........");
-			log.debug("[" + tid + "] .......... searchParam(" + searchParam + ") ..........");
+			log.debug("[" + tid + "] .......... SearchParam(" + searchParam + ") ..........");
 			
 			BasicListResponse res = new BasicListResponse();
 			SearchResultVo sRes = null;
